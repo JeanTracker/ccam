@@ -164,8 +164,7 @@ ccam logout account1   # Logout (removes Keychain token)
 ### Remove an account
 
 ```bash
-ccam remove account1           # Unregister account
-ccam remove account1 --purge   # Unregister and delete config directory
+ccam remove account1   # Unregister account and delete config directory
 ```
 
 
