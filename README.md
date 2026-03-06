@@ -161,6 +161,12 @@ ccam login account1    # Browser OAuth login
 ccam logout account1   # Logout (removes Keychain token)
 ```
 
+### Version
+
+```bash
+ccam version   # Print current version and check for latest release
+```
+
 ### Remove an account
 
 ```bash
