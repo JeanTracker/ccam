@@ -89,12 +89,10 @@ fn print_summary(
         account.config_dir.display().to_string().red()
     };
 
-    let user_str = match (&auth.display_name, &auth.email) {
-        (Some(name), Some(email)) => format!("  {}", format!("{} <{}>", name, email).dimmed()),
-        (Some(name), None) => format!("  {}", name.as_str().dimmed()),
-        (None, Some(email)) => format!("  {}", email.as_str().dimmed()),
-        _ => String::new(),
-    };
+    let user_str = auth
+        .display_info()
+        .map(|info| format!("  {}", info.dimmed()))
+        .unwrap_or_default();
 
     println!(
         "{}{:<12} {}  [{}]{}",
