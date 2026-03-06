@@ -6,6 +6,14 @@ However, Claude Code only supports one account at a time. Even with multiple ter
 
 ccam removes that friction. Each terminal session can run a different Claude Code account simultaneously, making it seamless to distribute usage across accounts and get the most out of your subscriptions.
 
+## Overview
+
+### Account Switching Model
+
+**Default Account** (`ccam default <alias>`) — the account applied automatically whenever a new terminal session opens. Set it once, and every new terminal starts with that account active. Managed via shell integration.
+
+**Session Switch** (`ccam use <alias>`) — temporarily switches the account in the current shell session only. Useful when you want to use a different account without changing the default. The switch does not affect other terminal windows, and reverts to the default when you open a new session.
+
 ```
  New terminal           Current terminal        New terminal
  (default applies)      (ccam use)              (default applies)
@@ -17,6 +25,38 @@ ccam removes that friction. Each terminal session can run a different Claude Cod
 │                   │  │    (this session  │  │                   │
 └───────────────────┘  │     only)         │  └───────────────────┘
                        └───────────────────┘
+```
+
+### Shared files across accounts
+
+Giving each account its own `CLAUDE_CONFIG_DIR` isolates credentials, but it also separates files like `settings.json`, `CLAUDE.md`, and `plugins/` — meaning changes in one account don't carry over to others.
+
+ccam solves this by symlinking those files through a shared directory (`~/.claude-accounts/shared/`), which itself points to `~/.claude/`. Every account directory gets symlinks for the shared items, so all accounts read and write the same files.
+
+**Shared items:** `settings.json`, `CLAUDE.md`, `plugins/`
+
+```
+~/.claude/
+├── settings.json          # ← single source of truth (shared across all accounts)
+├── CLAUDE.md
+└── plugins/
+
+~/.claude-accounts/
+├── accounts.toml          # account registry (paths, metadata; no credentials)
+├── shared/
+│   ├── settings.json ──→  ~/.claude/settings.json   (symlink)
+│   ├── CLAUDE.md ──────→  ~/.claude/CLAUDE.md        (symlink)
+│   └── plugins/ ───────→  ~/.claude/plugins/         (symlink)
+├── account1/              # CLAUDE_CONFIG_DIR for account1
+│   ├── settings.json ──→  ../shared/settings.json    (symlink)
+│   ├── CLAUDE.md ──────→  ../shared/CLAUDE.md        (symlink)
+│   ├── plugins/ ───────→  ../shared/plugins/         (symlink)
+│   └── ...                # auth state, project history (per-account)
+└── account2/
+    ├── settings.json ──→  ../shared/settings.json    (symlink)
+    ├── CLAUDE.md ──────→  ../shared/CLAUDE.md        (symlink)
+    ├── plugins/ ───────→  ../shared/plugins/         (symlink)
+    └── ...
 ```
 
 ## Requirements
@@ -58,12 +98,6 @@ eval "$(ccam init bash)"
 fish_add_path "$HOME/.local/bin"
 ccam init fish | source
 ```
-
-## Account Switching Model
-
-**Default Account** (`ccam default <alias>`) — the account applied automatically whenever a new terminal session opens. Set it once, and every new terminal starts with that account active. Managed via shell integration.
-
-**Session Switch** (`ccam use <alias>`) — temporarily switches the account in the current shell session only. Useful when you want to use a different account without changing the default. The switch does not affect other terminal windows, and reverts to the default when you open a new session.
 
 ## Usage
 

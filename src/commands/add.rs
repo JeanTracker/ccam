@@ -20,6 +20,8 @@ pub fn run(
         "      {}",
         account.config_dir.display().to_string().dimmed()
     );
+    config::ensure_shared_symlinks()?;
+    config::setup_account_symlinks(&account.config_dir)?;
 
     if no_login {
         println!("[2/3] {}", "로그인 건너뜀 (--no-login)".yellow());
