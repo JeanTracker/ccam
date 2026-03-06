@@ -14,20 +14,9 @@ pub fn run(alias: &str) -> Result<()> {
     );
     // stderr: user-facing messages (not captured by eval)
     let auth = claude::auth_status(&account.config_dir);
-    let account_info = match (&auth.display_name, &auth.email) {
-        (Some(name), Some(email)) => format!("{} <{}>", name, email),
-        (Some(name), None) => name.clone(),
-        (None, Some(email)) => email.clone(),
-        (None, None) => String::new(),
-    };
-    if account_info.is_empty() {
-        eprintln!("Switched to account: {}", alias.bold());
-    } else {
-        eprintln!(
-            "Switched to account: {}  {}",
-            alias.bold(),
-            account_info.dimmed()
-        );
+    match auth.display_info() {
+        Some(info) => eprintln!("Switched to account: {}  {}", alias.bold(), info.dimmed()),
+        None => eprintln!("Switched to account: {}", alias.bold()),
     }
     Ok(())
 }

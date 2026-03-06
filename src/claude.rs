@@ -29,6 +29,19 @@ pub struct AuthStatus {
     pub subscription_type: Option<String>,
 }
 
+impl AuthStatus {
+    /// Returns a formatted account info string like "Name <email>" or just "email".
+    /// Returns None if neither display_name nor email is available.
+    pub fn display_info(&self) -> Option<String> {
+        match (&self.display_name, &self.email) {
+            (Some(name), Some(email)) => Some(format!("{} <{}>", name, email)),
+            (Some(name), None) => Some(name.clone()),
+            (None, Some(email)) => Some(email.clone()),
+            (None, None) => None,
+        }
+    }
+}
+
 /// Returns detailed authentication status for the given config directory.
 pub fn auth_status(config_dir: &Path) -> AuthStatus {
     let keychain = has_keychain_api_key(config_dir);

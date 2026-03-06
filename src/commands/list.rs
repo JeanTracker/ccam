@@ -59,12 +59,9 @@ pub fn run(names_only: bool) -> Result<()> {
         };
 
         let auth = claude::auth_status(&account.config_dir);
-        let account_str = match (&auth.display_name, &auth.email) {
-            (Some(name), Some(email)) => format!("{} <{}>", name, email),
-            (Some(name), None) => name.clone(),
-            (None, Some(email)) => email.clone(),
-            (None, None) => account.config_dir.display().to_string(),
-        };
+        let account_str = auth
+            .display_info()
+            .unwrap_or_else(|| account.config_dir.display().to_string());
 
         let desc = account
             .description
