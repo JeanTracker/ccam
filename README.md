@@ -10,14 +10,18 @@ ccam keeps each account's session isolated so you can switch between them with a
 
 - macOS
 - [Claude Code](https://claude.ai/code) installed (`claude` binary in PATH)
-- Rust (for building from source)
 
 ## Installation
 
 ```bash
-git clone https://github.com/yourname/ccam.git
-cd ccam
-cargo install --path .
+curl -fsSL https://raw.githubusercontent.com/JeanTracker/ccam/master/install.sh | sh
+```
+
+Installs to `~/.local/bin`.
+
+**Build from source** (requires Rust):
+```bash
+cargo install --git https://github.com/JeanTracker/ccam
 ```
 
 ## Shell Integration
@@ -26,16 +30,19 @@ Shell integration is required for `ccam use` to take effect in the current shell
 
 **zsh** — add to `~/.zshrc`:
 ```zsh
+export PATH="$HOME/.local/bin:$PATH"
 eval "$(ccam init zsh)"
 ```
 
 **bash** — add to `~/.bashrc`:
 ```bash
+export PATH="$HOME/.local/bin:$PATH"
 eval "$(ccam init bash)"
 ```
 
 **fish** — add to `~/.config/fish/config.fish`:
 ```fish
+fish_add_path "$HOME/.local/bin"
 ccam init fish | source
 ```
 
@@ -44,10 +51,10 @@ ccam init fish | source
 ### Add an account
 
 ```bash
-ccam add personal                         # Creates ~/.claude-accounts/personal and logs in
-ccam add work --description "Work account"
+ccam add account1                         # Creates ~/.claude-accounts/account1 and logs in
+ccam add account2 --description "Second account"
 ccam add main --dir ~/.claude             # Reuse an existing directory
-ccam add staging --no-login               # Create directory only, login later
+ccam add account3 --no-login              # Create directory only, login later
 ```
 
 The first account added is automatically set as the default.
@@ -55,7 +62,7 @@ The first account added is automatically set as the default.
 ### Switch accounts
 
 ```bash
-ccam use personal      # Switch in the current shell session
+ccam use account1      # Switch in the current shell session
 ```
 
 When a new terminal opens, the default account is applied automatically via the shell integration.
@@ -67,8 +74,8 @@ ccam list
 ```
 
 ```
-  personal   hyojoong <hyojoong@gmail.com>
-* work        jean <jean@company.com>        (default)
+  account1   user1 <user1@example.com>
+* account2   user2 <user2@example.com>   (default)
 ```
 
 ### Active account
@@ -81,47 +88,46 @@ ccam active --short    # Print only the alias (useful for shell prompt integrati
 ### Auth status
 
 ```bash
-ccam status            # Summary of all accounts
-ccam status work       # Detailed info for a specific account
+ccam status             # Summary of all accounts
+ccam status account1    # Detailed info for a specific account
 ```
 
 ```
-work (default)
-  path    /Users/username/.claude-accounts/work
+account1 (default)
+  path    /Users/username/.claude-accounts/account1
   added   2026-03-05
   auth    OAuth ✓  Keychain ✓
-  user    Jean <jean@company.com>  [stripe_subscription]
+  user    user1 <user1@example.com>  [stripe_subscription]
 ```
 
 ### Default account
 
 ```bash
-ccam default work      # Set default account
-ccam default           # Show current default
-ccam default --unset   # Remove default
+ccam default account1   # Set default account
+ccam default            # Show current default
 ```
 
 ### Login / Logout
 
 ```bash
-ccam login personal    # Browser OAuth login
-ccam logout personal   # Logout (removes Keychain token)
+ccam login account1    # Browser OAuth login
+ccam logout account1   # Logout (removes Keychain token)
 ```
 
 ### Remove an account
 
 ```bash
-ccam remove personal           # Unregister account
-ccam remove personal --purge   # Unregister and delete config directory
+ccam remove account1           # Unregister account
+ccam remove account1 --purge   # Unregister and delete config directory
 ```
 
 ### Keychain management
 
 ```bash
-ccam keychain list             # Keychain status for all accounts
-ccam keychain status-default   # Check legacy default Keychain entry
-ccam keychain clean-default    # Remove legacy default Keychain entry
-ccam keychain remove personal  # Remove Keychain entry for a specific account
+ccam keychain list              # Keychain status for all accounts
+ccam keychain status-default    # Check legacy default Keychain entry
+ccam keychain clean-default     # Remove legacy default Keychain entry
+ccam keychain remove account1   # Remove Keychain entry for a specific account
 ```
 
 ## How it works
@@ -131,10 +137,10 @@ Claude Code uses `CLAUDE_CONFIG_DIR` as its config directory when set, and looks
 `ccam use <alias>` prints an `export` statement that the shell integration evaluates in the current shell:
 
 ```
-ccam use work
-→ outputs: export CLAUDE_CONFIG_DIR="/Users/username/.claude-accounts/work"
+ccam use account1
+→ outputs: export CLAUDE_CONFIG_DIR="/Users/username/.claude-accounts/account1"
 → shell function evals the output → applies to current shell
-→ claude uses the Keychain token for the work account
+→ claude uses the Keychain token for account1
 ```
 
 ## Config file
@@ -142,15 +148,15 @@ ccam use work
 **`~/.claude-accounts/accounts.toml`**
 
 ```toml
-default = "work"
+default = "account1"
 
-[accounts.work]
-config_dir = "/Users/username/.claude-accounts/work"
-description = "Work account"
+[accounts.account1]
+config_dir = "/Users/username/.claude-accounts/account1"
+description = "Second account"
 added_at = "2026-03-05T09:00:00Z"
 
-[accounts.personal]
-config_dir = "/Users/username/.claude-accounts/personal"
+[accounts.account2]
+config_dir = "/Users/username/.claude-accounts/account2"
 added_at = "2026-03-05T10:00:00Z"
 ```
 
@@ -167,6 +173,3 @@ ccam add main --dir ~/.claude   # Re-login required
 ccam keychain clean-default      # Optionally clean up the legacy Keychain entry
 ```
 
-## License
-
-MIT
