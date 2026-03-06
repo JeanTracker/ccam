@@ -28,6 +28,84 @@ pub fn accounts_dir() -> PathBuf {
         .join(".claude-accounts")
 }
 
+pub fn claude_dir() -> PathBuf {
+    home_dir().expect("home dir not found").join(".claude")
+}
+
+pub fn shared_dir() -> PathBuf {
+    accounts_dir().join("shared")
+}
+
+/// 공유 대상 항목 (settings.json, CLAUDE.md, plugins/)
+pub const SHARED_ITEMS: &[&str] = &["settings.json", "CLAUDE.md", "plugins"];
+
+fn is_symlink(path: &Path) -> bool {
+    path.symlink_metadata()
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
+}
+
+fn create_symlink_if_needed(link: &Path, target: &Path) -> Result<()> {
+    if is_symlink(link) || link.exists() {
+        return Ok(());
+    }
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, link).with_context(|| {
+        format!(
+            "symlink {} -> {} 생성 실패",
+            link.display(),
+            target.display()
+        )
+    })?;
+    Ok(())
+}
+
+/// ~/.claude-accounts/shared/ 에 ~/.claude/ 를 가리키는 심볼릭 링크를 설정합니다.
+/// ~/.claude/ 가 없으면 생성합니다.
+pub fn ensure_shared_symlinks() -> Result<()> {
+    let claude = claude_dir();
+    let shared = shared_dir();
+    fs::create_dir_all(&claude)?;
+    fs::create_dir_all(&shared)?;
+    for name in SHARED_ITEMS {
+        create_symlink_if_needed(&shared.join(name), &claude.join(name))?;
+    }
+    Ok(())
+}
+
+/// 계정 디렉토리에 ../shared/ 를 가리키는 심볼릭 링크를 설정합니다.
+/// account_dir 이 ~/.claude 자체인 경우 (--dir ~/.claude) 심볼릭 링크 불필요.
+pub fn setup_account_symlinks(account_dir: &Path) -> Result<()> {
+    let claude = claude_dir();
+    let canon_account = account_dir
+        .canonicalize()
+        .unwrap_or_else(|_| account_dir.to_path_buf());
+    let canon_claude = claude.canonicalize().unwrap_or_else(|_| claude.clone());
+    if canon_account == canon_claude {
+        return Ok(());
+    }
+    for name in SHARED_ITEMS {
+        let account_path = account_dir.join(name);
+        if is_symlink(&account_path) {
+            continue;
+        }
+        // 실제 파일/디렉토리가 있으면 ~/.claude/ 로 이동 후 제거
+        if account_path.exists() {
+            let claude_target = claude.join(name);
+            if !claude_target.exists() {
+                fs::rename(&account_path, &claude_target)
+                    .with_context(|| format!("{} 이동 실패", account_path.display()))?;
+            } else if account_path.is_dir() {
+                fs::remove_dir_all(&account_path)?;
+            } else {
+                fs::remove_file(&account_path)?;
+            }
+        }
+        create_symlink_if_needed(&account_path, &PathBuf::from("../shared").join(name))?;
+    }
+    Ok(())
+}
+
 pub fn accounts_file() -> PathBuf {
     accounts_dir().join("accounts.toml")
 }
