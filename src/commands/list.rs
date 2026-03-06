@@ -1,4 +1,4 @@
-use crate::{claude, config};
+use crate::config;
 use anyhow::Result;
 use colored::Colorize;
 
@@ -58,10 +58,7 @@ pub fn run(names_only: bool) -> Result<()> {
             String::new()
         };
 
-        let auth = claude::auth_status(&account.config_dir);
-        let account_str = auth
-            .display_info()
-            .unwrap_or_else(|| account.config_dir.display().to_string());
+        let account_str = account.config_dir.display().to_string();
 
         let desc = account
             .description

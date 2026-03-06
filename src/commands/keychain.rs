@@ -20,17 +20,12 @@ pub fn run_list() -> Result<()> {
 
     for (alias, account) in &accounts {
         let auth = crate::claude::auth_status(&account.config_dir);
-        let oauth = if auth.oauth {
-            "OAuth ✓".green()
-        } else {
-            "OAuth ✗".dimmed()
-        };
         let keychain = if auth.keychain {
             "Keychain ✓".green()
         } else {
             "Keychain ✗".dimmed()
         };
-        println!("{:<12} {}  {}", alias.bold(), oauth, keychain);
+        println!("{:<12} {}", alias.bold(), keychain);
     }
     Ok(())
 }

@@ -76,11 +76,10 @@ fn print_summary(
     let is_default = cfg.default.as_deref() == Some(alias);
     let prefix = if is_default { "* " } else { "  " };
 
-    let auth_str = match (auth.oauth, auth.keychain) {
-        (true, true) => "OAuth+Keychain".green(),
-        (true, false) => "OAuth".green(),
-        (false, true) => "Keychain".green(),
-        (false, false) => "미로그인".yellow(),
+    let auth_str = if auth.keychain {
+        "로그인".green()
+    } else {
+        "미로그인".yellow()
     };
 
     let dir_str = if dir_exists {
@@ -89,19 +88,7 @@ fn print_summary(
         account.config_dir.display().to_string().red()
     };
 
-    let user_str = auth
-        .display_info()
-        .map(|info| format!("  {}", info.dimmed()))
-        .unwrap_or_default();
-
-    println!(
-        "{}{:<12} {}  [{}]{}",
-        prefix,
-        alias.bold(),
-        dir_str,
-        auth_str,
-        user_str
-    );
+    println!("{}{:<12} {}  [{}]", prefix, alias.bold(), dir_str, auth_str,);
 }
 
 fn print_detailed(
@@ -130,32 +117,10 @@ fn print_detailed(
     println!("  추가일  {}", &account.added_at[..10]);
 
     // Auth status
-    let oauth_icon = if auth.oauth {
-        "✓".green()
-    } else {
-        "✗".dimmed()
-    };
     let keychain_icon = if auth.keychain {
         "✓".green()
     } else {
         "✗".dimmed()
     };
-    println!("  인증    OAuth {}  Keychain {}", oauth_icon, keychain_icon);
-
-    // Account info from OAuth
-    if let Some(name) = &auth.display_name {
-        let email_str = auth
-            .email
-            .as_deref()
-            .map(|e| format!(" <{}>", e))
-            .unwrap_or_default();
-        let sub_str = auth
-            .subscription_type
-            .as_deref()
-            .map(|s| format!("  [{}]", s))
-            .unwrap_or_default();
-        println!("  계정    {}{}{}", name, email_str, sub_str);
-    } else if let Some(email) = &auth.email {
-        println!("  계정    {}", email);
-    }
+    println!("  인증    Keychain {}", keychain_icon);
 }
