@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::Utc;
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
@@ -37,8 +37,8 @@ pub fn load() -> Result<AccountsConfig> {
     if !path.exists() {
         return Ok(AccountsConfig::default());
     }
-    let content = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let content =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
     toml::from_str(&content).with_context(|| "failed to parse accounts.toml")
 }
 
@@ -123,9 +123,7 @@ pub fn get_default() -> Result<Option<String>> {
 
 pub fn expand_tilde(path: &Path) -> PathBuf {
     if let Ok(stripped) = path.strip_prefix("~") {
-        home_dir()
-            .expect("home dir not found")
-            .join(stripped)
+        home_dir().expect("home dir not found").join(stripped)
     } else {
         path.to_path_buf()
     }
@@ -151,8 +149,14 @@ mod tests {
             let tmp = tempfile::TempDir::new().unwrap();
             let old_home = std::env::var("HOME").ok();
             // SAFETY: serialized by HOME_LOCK mutex, no other threads modify HOME
-            unsafe { std::env::set_var("HOME", tmp.path()); }
-            Self { tmp, old_home, _guard: guard }
+            unsafe {
+                std::env::set_var("HOME", tmp.path());
+            }
+            Self {
+                tmp,
+                old_home,
+                _guard: guard,
+            }
         }
 
         fn path(&self) -> &std::path::Path {
@@ -218,7 +222,12 @@ mod tests {
     fn test_remove_default_account_reassigns_default() {
         let ctx = TestHome::new();
         add_account("work", ctx.path().join("accounts").join("work"), None).unwrap();
-        add_account("personal", ctx.path().join("accounts").join("personal"), None).unwrap();
+        add_account(
+            "personal",
+            ctx.path().join("accounts").join("personal"),
+            None,
+        )
+        .unwrap();
         set_default(Some("work")).unwrap();
         remove_account("work").unwrap();
 

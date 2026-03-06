@@ -1,4 +1,4 @@
-use crate::{claude, confirm, config};
+use crate::{claude, config, confirm};
 use anyhow::Result;
 use colored::Colorize;
 

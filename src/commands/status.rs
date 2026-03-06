@@ -77,7 +77,7 @@ fn print_summary(
     let prefix = if is_default { "* " } else { "  " };
 
     let auth_str = match (auth.oauth, auth.keychain) {
-        (true, true)  => "OAuth+Keychain".green(),
+        (true, true) => "OAuth+Keychain".green(),
         (true, false) => "OAuth".green(),
         (false, true) => "Keychain".green(),
         (false, false) => "미로그인".yellow(),
@@ -96,7 +96,14 @@ fn print_summary(
         _ => String::new(),
     };
 
-    println!("{}{:<12} {}  [{}]{}", prefix, alias.bold(), dir_str, auth_str, user_str);
+    println!(
+        "{}{:<12} {}  [{}]{}",
+        prefix,
+        alias.bold(),
+        dir_str,
+        auth_str,
+        user_str
+    );
 }
 
 fn print_detailed(
@@ -107,24 +114,48 @@ fn print_detailed(
     cfg: &config::AccountsConfig,
 ) {
     let is_default = cfg.default.as_deref() == Some(alias);
-    let default_tag = if is_default { " (기본)".cyan().to_string() } else { String::new() };
+    let default_tag = if is_default {
+        " (기본)".cyan().to_string()
+    } else {
+        String::new()
+    };
 
     println!("{}{}", alias.bold().green(), default_tag);
-    println!("  경로    {}{}", account.config_dir.display(), if dir_exists { "" } else { "  ⚠ 없음" });
+    println!(
+        "  경로    {}{}",
+        account.config_dir.display(),
+        if dir_exists { "" } else { "  ⚠ 없음" }
+    );
     if let Some(desc) = &account.description {
         println!("  설명    {}", desc);
     }
     println!("  추가일  {}", &account.added_at[..10]);
 
     // Auth status
-    let oauth_icon = if auth.oauth { "✓".green() } else { "✗".dimmed() };
-    let keychain_icon = if auth.keychain { "✓".green() } else { "✗".dimmed() };
+    let oauth_icon = if auth.oauth {
+        "✓".green()
+    } else {
+        "✗".dimmed()
+    };
+    let keychain_icon = if auth.keychain {
+        "✓".green()
+    } else {
+        "✗".dimmed()
+    };
     println!("  인증    OAuth {}  Keychain {}", oauth_icon, keychain_icon);
 
     // Account info from OAuth
     if let Some(name) = &auth.display_name {
-        let email_str = auth.email.as_deref().map(|e| format!(" <{}>", e)).unwrap_or_default();
-        let sub_str = auth.subscription_type.as_deref().map(|s| format!("  [{}]", s)).unwrap_or_default();
+        let email_str = auth
+            .email
+            .as_deref()
+            .map(|e| format!(" <{}>", e))
+            .unwrap_or_default();
+        let sub_str = auth
+            .subscription_type
+            .as_deref()
+            .map(|s| format!("  [{}]", s))
+            .unwrap_or_default();
         println!("  계정    {}{}{}", name, email_str, sub_str);
     } else if let Some(email) = &auth.email {
         println!("  계정    {}", email);

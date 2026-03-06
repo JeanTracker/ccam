@@ -23,8 +23,11 @@ pub fn run(alias: &str) -> Result<()> {
     if account_info.is_empty() {
         eprintln!("Switched to account: {}", alias.bold());
     } else {
-        eprintln!("Switched to account: {}  {}", alias.bold(), account_info.dimmed());
+        eprintln!(
+            "Switched to account: {}  {}",
+            alias.bold(),
+            account_info.dimmed()
+        );
     }
     Ok(())
 }
-

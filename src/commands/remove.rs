@@ -1,4 +1,4 @@
-use crate::{claude, confirm, config};
+use crate::{claude, config, confirm};
 use anyhow::Result;
 use colored::Colorize;
 use std::fs;
@@ -18,17 +18,19 @@ pub fn run(alias: &str, purge: bool) -> Result<()> {
             println!("취소되었습니다.");
             return Ok(());
         }
-    } else {
-        if !confirm::confirm_yn(&format!("'{}' 계정을 제거하시겠습니까?", alias)) {
-            println!("취소되었습니다.");
-            return Ok(());
-        }
+    } else if !confirm::confirm_yn(&format!("'{}' 계정을 제거하시겠습니까?", alias)) {
+        println!("취소되었습니다.");
+        return Ok(());
     }
 
     // Step 1: logout to clean Keychain
     println!("Keychain 항목 정리 중...");
     if let Err(e) = claude::logout(&account.config_dir) {
-        eprintln!("{} claude logout 실패 (Keychain 항목이 남아있을 수 있음): {}", "경고:".yellow(), e);
+        eprintln!(
+            "{} claude logout 실패 (Keychain 항목이 남아있을 수 있음): {}",
+            "경고:".yellow(),
+            e
+        );
     }
 
     // Step 2: remove from accounts.toml

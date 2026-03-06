@@ -1,5 +1,5 @@
-use crate::{confirm, config};
-use anyhow::{bail, Result};
+use crate::{config, confirm};
+use anyhow::{Result, bail};
 use colored::Colorize;
 use std::process::Command;
 
@@ -20,8 +20,16 @@ pub fn run_list() -> Result<()> {
 
     for (alias, account) in &accounts {
         let auth = crate::claude::auth_status(&account.config_dir);
-        let oauth = if auth.oauth { "OAuth ✓".green() } else { "OAuth ✗".dimmed() };
-        let keychain = if auth.keychain { "Keychain ✓".green() } else { "Keychain ✗".dimmed() };
+        let oauth = if auth.oauth {
+            "OAuth ✓".green()
+        } else {
+            "OAuth ✗".dimmed()
+        };
+        let keychain = if auth.keychain {
+            "Keychain ✓".green()
+        } else {
+            "Keychain ✗".dimmed()
+        };
         println!("{:<12} {}  {}", alias.bold(), oauth, keychain);
     }
     Ok(())
@@ -93,28 +101,15 @@ pub fn run_remove(alias: &str) -> Result<()> {
 
 fn check_keychain_entry(service: &str, account: &str) -> bool {
     Command::new("security")
-        .args([
-            "find-generic-password",
-            "-s",
-            service,
-            "-a",
-            account,
-        ])
+        .args(["find-generic-password", "-s", service, "-a", account])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
 }
 
-
 fn delete_keychain_entry(service: &str, account: &str) -> Result<()> {
     let status = Command::new("security")
-        .args([
-            "delete-generic-password",
-            "-s",
-            service,
-            "-a",
-            account,
-        ])
+        .args(["delete-generic-password", "-s", service, "-a", account])
         .status()?;
     if !status.success() {
         bail!("Keychain 항목 제거 실패 (이미 없거나 권한 문제)");

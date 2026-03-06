@@ -79,9 +79,7 @@ enum Command {
     Status { alias: Option<String> },
 
     #[command(hide = true)]
-    Init {
-        shell: String,
-    },
+    Init { shell: String },
 
     #[command(hide = true)]
     Keychain {
@@ -106,7 +104,12 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Add { alias, dir, description, no_login } => {
+        Command::Add {
+            alias,
+            dir,
+            description,
+            no_login,
+        } => {
             commands::add::run(&alias, dir.as_ref(), description.as_deref(), no_login)?;
         }
 

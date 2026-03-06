@@ -3,7 +3,12 @@ use anyhow::Result;
 use colored::Colorize;
 use std::path::PathBuf;
 
-pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>, no_login: bool) -> Result<()> {
+pub fn run(
+    alias: &str,
+    dir: Option<&PathBuf>,
+    description: Option<&str>,
+    no_login: bool,
+) -> Result<()> {
     let config_dir = match dir {
         Some(d) => config::expand_tilde(d),
         None => config::accounts_dir().join(alias),
@@ -11,7 +16,10 @@ pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>, no_log
 
     println!("[1/3] 디렉토리 준비: {}", config_dir.display());
     let account = config::add_account(alias, config_dir.clone(), description.map(str::to_string))?;
-    println!("      {}", account.config_dir.display().to_string().dimmed());
+    println!(
+        "      {}",
+        account.config_dir.display().to_string().dimmed()
+    );
 
     if no_login {
         println!("[2/3] {}", "로그인 건너뜀 (--no-login)".yellow());

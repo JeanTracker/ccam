@@ -1,15 +1,15 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::path::Path;
 use std::process::Command;
 
 fn find_claude() -> Result<String> {
     let output = Command::new("which").arg("claude").output();
-    if let Ok(o) = output {
-        if o.status.success() {
-            let path = String::from_utf8_lossy(&o.stdout).trim().to_string();
-            if !path.is_empty() {
-                return Ok(path);
-            }
+    if let Ok(o) = output
+        && o.status.success()
+    {
+        let path = String::from_utf8_lossy(&o.stdout).trim().to_string();
+        if !path.is_empty() {
+            return Ok(path);
         }
     }
     bail!("'claude' binary not found in PATH. Install Claude Code first.");
@@ -35,25 +35,53 @@ pub fn auth_status(config_dir: &Path) -> AuthStatus {
     let claude_json = config_dir.join(".claude.json");
 
     let Ok(content) = std::fs::read_to_string(&claude_json) else {
-        return AuthStatus { oauth: false, keychain, display_name: None, email: None, subscription_type: None };
+        return AuthStatus {
+            oauth: false,
+            keychain,
+            display_name: None,
+            email: None,
+            subscription_type: None,
+        };
     };
     let Ok(value) = serde_json::from_str::<serde_json::Value>(&content) else {
-        return AuthStatus { oauth: false, keychain, display_name: None, email: None, subscription_type: None };
+        return AuthStatus {
+            oauth: false,
+            keychain,
+            display_name: None,
+            email: None,
+            subscription_type: None,
+        };
     };
 
     let oauth_account = value.get("oauthAccount");
     let oauth = oauth_account.is_some_and(|v| !v.is_null());
 
-    let (display_name, email, subscription_type) = if let Some(oa) = oauth_account.and_then(|v| v.as_object()) {
-        let display_name = oa.get("displayName").and_then(|v| v.as_str()).map(str::to_string);
-        let email = oa.get("emailAddress").and_then(|v| v.as_str()).map(str::to_string);
-        let subscription_type = oa.get("billingType").and_then(|v| v.as_str()).map(str::to_string);
-        (display_name, email, subscription_type)
-    } else {
-        (None, None, None)
-    };
+    let (display_name, email, subscription_type) =
+        if let Some(oa) = oauth_account.and_then(|v| v.as_object()) {
+            let display_name = oa
+                .get("displayName")
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
+            let email = oa
+                .get("emailAddress")
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
+            let subscription_type = oa
+                .get("billingType")
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
+            (display_name, email, subscription_type)
+        } else {
+            (None, None, None)
+        };
 
-    AuthStatus { oauth, keychain, display_name, email, subscription_type }
+    AuthStatus {
+        oauth,
+        keychain,
+        display_name,
+        email,
+        subscription_type,
+    }
 }
 
 /// Check if an account is logged in via OAuth or API key.
@@ -187,24 +215,33 @@ mod tests {
     #[test]
     fn test_auth_status_oauth_present() {
         let tmp = TempDir::new().unwrap();
-        write_claude_json(tmp.path(), r#"{
+        write_claude_json(
+            tmp.path(),
+            r#"{
             "oauthAccount": {
                 "displayName": "hyojoong",
                 "emailAddress": "hyojoong@gmail.com",
                 "billingType": "stripe_subscription"
             }
-        }"#);
+        }"#,
+        );
         let status = auth_status(tmp.path());
         assert!(status.oauth);
         assert_eq!(status.display_name.as_deref(), Some("hyojoong"));
         assert_eq!(status.email.as_deref(), Some("hyojoong@gmail.com"));
-        assert_eq!(status.subscription_type.as_deref(), Some("stripe_subscription"));
+        assert_eq!(
+            status.subscription_type.as_deref(),
+            Some("stripe_subscription")
+        );
     }
 
     #[test]
     fn test_auth_status_partial_fields() {
         let tmp = TempDir::new().unwrap();
-        write_claude_json(tmp.path(), r#"{"oauthAccount": {"emailAddress": "only@email.com"}}"#);
+        write_claude_json(
+            tmp.path(),
+            r#"{"oauthAccount": {"emailAddress": "only@email.com"}}"#,
+        );
         let status = auth_status(tmp.path());
         assert!(status.oauth);
         assert!(status.display_name.is_none());
@@ -223,7 +260,10 @@ mod tests {
     #[test]
     fn test_is_logged_in_true_when_oauth() {
         let tmp = TempDir::new().unwrap();
-        write_claude_json(tmp.path(), r#"{"oauthAccount": {"emailAddress": "test@example.com"}}"#);
+        write_claude_json(
+            tmp.path(),
+            r#"{"oauthAccount": {"emailAddress": "test@example.com"}}"#,
+        );
         assert!(is_logged_in(tmp.path()));
     }
 }

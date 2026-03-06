@@ -15,23 +15,20 @@ pub fn run(names_only: bool) -> Result<()> {
 
         // Hint about existing ~/.claude
         let default_claude = dirs::home_dir().map(|h| h.join(".claude"));
-        if let Some(path) = default_claude {
-            if path.exists() {
-                println!();
-                println!(
-                    "{} 기존 Claude 디렉토리({})가 감지되었습니다.",
-                    "참고:".yellow().bold(),
-                    path.display()
-                );
-                println!(
-                    "  {} 기존 디렉토리를 재활용 (재로그인 필요)",
-                    format!("ccm add <별칭> --dir ~/.claude").cyan()
-                );
-                println!(
-                    "  {} 새 계정 추가",
-                    "ccm add <별칭>".cyan()
-                );
-            }
+        if let Some(path) = default_claude
+            && path.exists()
+        {
+            println!();
+            println!(
+                "{} 기존 Claude 디렉토리({})가 감지되었습니다.",
+                "참고:".yellow().bold(),
+                path.display()
+            );
+            println!(
+                "  {} 기존 디렉토리를 재활용 (재로그인 필요)",
+                "ccm add <별칭> --dir ~/.claude".to_string().cyan()
+            );
+            println!("  {} 새 계정 추가", "ccm add <별칭>".cyan());
         }
         return Ok(());
     }
