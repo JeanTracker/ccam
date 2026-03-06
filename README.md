@@ -160,6 +160,13 @@ ccam default account1   # Set default account
 ccam default            # Show current default
 ```
 
+
+### Version
+
+```bash
+ccam version   # Print current version and check for latest release
+```
+
 ### Remove an account
 
 ```bash

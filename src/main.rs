@@ -64,6 +64,9 @@ enum Command {
     /// Show login status of accounts
     Status { alias: Option<String> },
 
+    /// Print version and check for updates
+    Version,
+
     #[command(hide = true)]
     Init { shell: String },
 
@@ -84,6 +87,18 @@ enum KeychainCommand {
     CleanDefault,
     /// Remove Keychain entry for a specific account (requires 'yes' confirmation)
     Remove { alias: String },
+}
+
+fn fetch_latest_version() -> Option<String> {
+    let json: serde_json::Value = ureq::get("https://api.github.com/repos/JeanTracker/ccam/releases/latest")
+        .header("User-Agent", "ccam")
+        .call()
+        .ok()?
+        .body_mut()
+        .read_json()
+        .ok()?;
+    let tag = json.get("tag_name")?.as_str()?;
+    Some(tag.trim_start_matches('v').to_string())
 }
 
 fn main() -> Result<()> {
@@ -136,6 +151,26 @@ fn main() -> Result<()> {
 
         Command::Status { alias } => {
             commands::status::run_status(alias.as_deref())?;
+        }
+
+        Command::Version => {
+            use colored::Colorize;
+            let current = env!("CARGO_PKG_VERSION");
+            print!("{}", current);
+            match fetch_latest_version() {
+                Some(latest) if latest != current => {
+                    println!("  (latest: {})", latest.yellow());
+                    println!(
+                        "  업데이트: curl -fsSL https://raw.githubusercontent.com/JeanTracker/ccam/master/install.sh | sh"
+                    );
+                }
+                Some(latest) => {
+                    println!("  (latest: {})", latest);
+                }
+                None => {
+                    println!("  (latest: unknown)");
+                }
+            }
         }
 
         Command::Init { shell } => {
