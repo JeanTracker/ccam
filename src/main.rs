@@ -36,13 +36,8 @@ enum Command {
         names_only: bool,
     },
 
-    /// Remove an account
-    Remove {
-        alias: String,
-        /// Also delete the config directory
-        #[arg(long)]
-        purge: bool,
-    },
+    /// Remove an account and delete its config directory
+    Remove { alias: String },
 
     /// [Internal] Output `export CLAUDE_CONFIG_DIR=...` for eval
     #[command(name = "__env", hide = true)]
@@ -117,8 +112,8 @@ fn main() -> Result<()> {
             commands::list::run(names_only)?;
         }
 
-        Command::Remove { alias, purge } => {
-            commands::remove::run(&alias, purge)?;
+        Command::Remove { alias } => {
+            commands::remove::run(&alias)?;
         }
 
         Command::InternalEnv { alias } | Command::Env { alias } => {
