@@ -97,12 +97,6 @@ pub fn auth_status(config_dir: &Path) -> AuthStatus {
     }
 }
 
-/// Check if an account is logged in via OAuth or API key.
-pub fn is_logged_in(config_dir: &Path) -> bool {
-    let s = auth_status(config_dir);
-    s.oauth || s.keychain
-}
-
 fn has_keychain_api_key(config_dir: &Path) -> bool {
     // Claude Code stores credentials as "Claude Code-credentials-<sha256[:8]>" for custom dirs,
     // or "Claude Code-credentials" for the default (no CLAUDE_CONFIG_DIR).
@@ -112,36 +106,6 @@ fn has_keychain_api_key(config_dir: &Path) -> bool {
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
-}
-
-pub fn dir_keychain_service(config_dir: &Path) -> String {
-    use sha2::{Digest, Sha256};
-    use std::fmt::Write;
-    let path_str = config_dir.to_string_lossy();
-    let hash = Sha256::digest(path_str.as_bytes());
-    let mut hex = String::with_capacity(8);
-    for b in &hash[..4] {
-        write!(hex, "{:02x}", b).unwrap();
-    }
-    format!("Claude Code-credentials-{}", hex)
-}
-
-/// Run `claude auth login` with CLAUDE_CONFIG_DIR set to config_dir.
-/// The process is interactive (inherits stdin/stdout/stderr).
-/// Returns an error if the process fails OR if Keychain verification shows no token was saved.
-pub fn login(config_dir: &Path) -> Result<()> {
-    let claude = find_claude()?;
-    let status = Command::new(&claude)
-        .args(["auth", "login"])
-        .env("CLAUDE_CONFIG_DIR", config_dir)
-        .status()?;
-    if !status.success() {
-        bail!("claude login failed");
-    }
-    if !is_logged_in(config_dir) {
-        bail!("로그인이 완료되지 않았습니다. /login 명령으로 로그인 후 종료해 주세요.");
-    }
-    Ok(())
 }
 
 /// Run `claude auth logout` with CLAUDE_CONFIG_DIR set to config_dir.
@@ -156,6 +120,19 @@ pub fn logout(config_dir: &Path) -> Result<()> {
     }
     Ok(())
 }
+
+pub fn dir_keychain_service(config_dir: &Path) -> String {
+    use sha2::{Digest, Sha256};
+    use std::fmt::Write;
+    let path_str = config_dir.to_string_lossy();
+    let hash = Sha256::digest(path_str.as_bytes());
+    let mut hex = String::with_capacity(8);
+    for b in &hash[..4] {
+        write!(hex, "{:02x}", b).unwrap();
+    }
+    format!("Claude Code-credentials-{}", hex)
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -261,22 +238,4 @@ mod tests {
         assert_eq!(status.email.as_deref(), Some("only@email.com"));
     }
 
-    // -- is_logged_in --
-
-    #[test]
-    fn test_is_logged_in_false_when_no_auth() {
-        let tmp = TempDir::new().unwrap();
-        // 빈 디렉토리 → Keychain 없음, .claude.json 없음
-        assert!(!is_logged_in(tmp.path()));
-    }
-
-    #[test]
-    fn test_is_logged_in_true_when_oauth() {
-        let tmp = TempDir::new().unwrap();
-        write_claude_json(
-            tmp.path(),
-            r#"{"oauthAccount": {"emailAddress": "test@example.com"}}"#,
-        );
-        assert!(is_logged_in(tmp.path()));
-    }
 }
