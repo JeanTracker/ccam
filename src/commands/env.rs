@@ -8,10 +8,16 @@ use colored::Colorize;
 pub fn run(alias: &str) -> Result<()> {
     let account = config::get_account(alias)?;
     // stdout: only the export statement for eval
-    println!(
-        "export CLAUDE_CONFIG_DIR=\"{}\"",
-        account.config_dir.display()
-    );
+    // If the account uses the default ~/.claude directory, unset CLAUDE_CONFIG_DIR so Claude Code
+    // uses its built-in default keychain key ("Claude Code-credentials" without hash suffix).
+    if claude::is_default_config_dir(&account.config_dir) {
+        println!("unset CLAUDE_CONFIG_DIR");
+    } else {
+        println!(
+            "export CLAUDE_CONFIG_DIR=\"{}\"",
+            account.config_dir.display()
+        );
+    }
     // stderr: user-facing messages (not captured by eval)
     if claude::auth_status(&account.config_dir).keychain {
         // Refresh stored user info on each switch (picks up logins done outside ccm)

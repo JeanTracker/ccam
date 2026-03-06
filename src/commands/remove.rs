@@ -25,8 +25,14 @@ pub fn run(alias: &str) -> Result<()> {
     config::remove_account(alias)?;
     println!("accounts.toml에서 '{}' 제거 완료.", alias);
 
-    // Step 3: delete config directory
-    if account.config_dir.exists() {
+    // Step 3: delete config directory (skip if it's the default ~/.claude)
+    if claude::is_default_config_dir(&account.config_dir) {
+        println!(
+            "{} 기본 디렉토리({})는 삭제하지 않습니다.",
+            "참고:".yellow(),
+            account.config_dir.display()
+        );
+    } else if account.config_dir.exists() {
         fs::remove_dir_all(&account.config_dir)?;
         println!("디렉토리 삭제 완료: {}", account.config_dir.display());
     }
