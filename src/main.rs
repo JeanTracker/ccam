@@ -1,0 +1,180 @@
+mod claude;
+mod commands;
+mod config;
+mod confirm;
+
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use std::path::PathBuf;
+
+#[derive(Parser)]
+#[command(name = "ccam", about = "Claude Code multi-account manager", version)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Add a new account and log in via browser
+    Add {
+        alias: String,
+        /// Use an existing directory instead of creating a new one
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        #[arg(long, short)]
+        description: Option<String>,
+        /// Skip browser login (login later with: ccm login <alias>)
+        #[arg(long)]
+        no_login: bool,
+    },
+
+    /// List all registered accounts
+    List {
+        /// Print account names only (for shell completion)
+        #[arg(long)]
+        names_only: bool,
+    },
+
+    /// Remove an account
+    Remove {
+        alias: String,
+        /// Also delete the config directory
+        #[arg(long)]
+        purge: bool,
+    },
+
+    /// [Internal] Output `export CLAUDE_CONFIG_DIR=...` for eval
+    #[command(name = "__env", hide = true)]
+    InternalEnv { alias: String },
+
+    #[command(hide = true)]
+    Env { alias: String },
+
+    /// Switch to an account in the current shell (use via: eval "$(ccm use <alias>)")
+    Use { alias: String },
+
+    /// Set or get the default account
+    Default {
+        alias: Option<String>,
+        /// Print the current default account name
+        #[arg(long)]
+        get: bool,
+        /// Remove the default account setting
+        #[arg(long)]
+        unset: bool,
+    },
+
+    /// Log in to an account via browser
+    Login { alias: String },
+
+    /// Log out from an account (removes Keychain token)
+    Logout { alias: String },
+
+    /// Show the currently active account (based on CLAUDE_CONFIG_DIR)
+    Active {
+        /// Print only the account alias (for shell prompt integration)
+        #[arg(long)]
+        short: bool,
+    },
+
+    /// Show login status of accounts
+    Status { alias: Option<String> },
+
+    #[command(hide = true)]
+    Init {
+        shell: String,
+    },
+
+    #[command(hide = true)]
+    Keychain {
+        #[command(subcommand)]
+        subcommand: KeychainCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum KeychainCommand {
+    /// List Keychain status for all registered accounts
+    List,
+    /// Check if the legacy default Keychain entry exists
+    StatusDefault,
+    /// Remove the legacy default Keychain entry (requires 'yes' confirmation)
+    CleanDefault,
+    /// Remove Keychain entry for a specific account (requires 'yes' confirmation)
+    Remove { alias: String },
+}
+
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    match cli.command {
+        Command::Add { alias, dir, description, no_login } => {
+            commands::add::run(&alias, dir.as_ref(), description.as_deref(), no_login)?;
+        }
+
+        Command::List { names_only } => {
+            commands::list::run(names_only)?;
+        }
+
+        Command::Remove { alias, purge } => {
+            commands::remove::run(&alias, purge)?;
+        }
+
+        Command::InternalEnv { alias } | Command::Env { alias } => {
+            commands::env::run(&alias)?;
+        }
+
+        Command::Use { alias } => {
+            commands::env::run(&alias)?;
+        }
+
+        Command::Default { alias, get, unset } => {
+            if get {
+                if let Some(d) = config::get_default()? {
+                    println!("{}", d);
+                }
+            } else if unset {
+                config::set_default(None)?;
+                eprintln!("기본 계정 설정이 제거되었습니다.");
+            } else if let Some(a) = alias {
+                config::set_default(Some(&a))?;
+                eprintln!("기본 계정: {}", a);
+            } else {
+                match config::get_default()? {
+                    Some(d) => println!("기본 계정: {}", d),
+                    None => println!("기본 계정이 설정되지 않았습니다."),
+                }
+            }
+        }
+
+        Command::Login { alias } => {
+            commands::login::run_login(&alias)?;
+        }
+
+        Command::Logout { alias } => {
+            commands::login::run_logout(&alias)?;
+        }
+
+        Command::Active { short } => {
+            commands::status::run_current(short)?;
+        }
+
+        Command::Status { alias } => {
+            commands::status::run_status(alias.as_deref())?;
+        }
+
+        Command::Init { shell } => {
+            commands::init::run(&shell)?;
+        }
+
+        Command::Keychain { subcommand } => match subcommand {
+            KeychainCommand::List => commands::keychain::run_list()?,
+            KeychainCommand::StatusDefault => commands::keychain::run_status_default()?,
+            KeychainCommand::CleanDefault => commands::keychain::run_clean_default()?,
+            KeychainCommand::Remove { alias } => commands::keychain::run_remove(&alias)?,
+        },
+    }
+
+    Ok(())
+}
