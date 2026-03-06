@@ -60,9 +60,6 @@ enum Command {
         /// Print the current default account name
         #[arg(long)]
         get: bool,
-        /// Remove the default account setting
-        #[arg(long)]
-        unset: bool,
     },
 
     /// Log in to an account via browser
@@ -129,14 +126,11 @@ fn main() -> Result<()> {
             commands::env::run(&alias)?;
         }
 
-        Command::Default { alias, get, unset } => {
+        Command::Default { alias, get } => {
             if get {
                 if let Some(d) = config::get_default()? {
                     println!("{}", d);
                 }
-            } else if unset {
-                config::set_default(None)?;
-                eprintln!("기본 계정 설정이 제거되었습니다.");
             } else if let Some(a) = alias {
                 config::set_default(Some(&a))?;
                 eprintln!("기본 계정: {}", a);
