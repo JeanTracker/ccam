@@ -104,13 +104,19 @@ ccam init fish | source
 ### Add an account
 
 ```bash
-ccam add account1                         # Creates ~/.claude-accounts/account1 and logs in
-ccam add account2 --description "Second account"
+ccam add account1                          # Create ~/.claude-accounts/account1
+ccam add account2 --description "Work"    # With a description
 ccam add main --dir ~/.claude             # Reuse an existing directory
-ccam add account3 --no-login              # Create directory only, login later
 ```
 
 The first account added is automatically set as the default.
+
+After adding, switch to the account and run `claude` to log in through Claude Code's built-in login flow:
+
+```bash
+ccam use account1
+claude
+```
 
 ### Switch accounts
 
@@ -143,8 +149,7 @@ ccam status account1    # Detailed info for a specific account
 account1 (default)
   path    /Users/username/.claude-accounts/account1
   added   2026-03-05
-  auth    OAuth ✓  Keychain ✓
-  user    user1 <user1@example.com>  [stripe_subscription]
+  auth    Keychain ✓
 ```
 
 ### Default account
@@ -152,13 +157,6 @@ account1 (default)
 ```bash
 ccam default account1   # Set default account
 ccam default            # Show current default
-```
-
-### Login / Logout
-
-```bash
-ccam login account1    # Browser OAuth login
-ccam logout account1   # Logout (removes Keychain token)
 ```
 
 ### Remove an account
@@ -207,6 +205,5 @@ If you have been using Claude Code without `CLAUDE_CONFIG_DIR`, your existing lo
 To bring your existing `~/.claude` directory into ccam:
 
 ```bash
-ccam add main --dir ~/.claude   # Re-login required
+ccam add main --dir ~/.claude
 ```
-

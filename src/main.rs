@@ -16,7 +16,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Add a new account and log in via browser
+    /// Add a new account (login via `claude` after switching with `ccam use`)
     Add {
         alias: String,
         /// Use an existing directory instead of creating a new one
@@ -24,9 +24,6 @@ enum Command {
         dir: Option<PathBuf>,
         #[arg(long, short)]
         description: Option<String>,
-        /// Skip browser login (login later with: ccm login <alias>)
-        #[arg(long)]
-        no_login: bool,
     },
 
     /// List all registered accounts
@@ -46,7 +43,7 @@ enum Command {
     #[command(hide = true)]
     Env { alias: String },
 
-    /// Switch to an account in the current shell (use via: eval "$(ccm use <alias>)")
+    /// Switch to an account in the current shell (use via: eval "$(ccam use <alias>)")
     Use { alias: String },
 
     /// Set or get the default account
@@ -56,12 +53,6 @@ enum Command {
         #[arg(long)]
         get: bool,
     },
-
-    /// Log in to an account via browser
-    Login { alias: String },
-
-    /// Log out from an account (removes Keychain token)
-    Logout { alias: String },
 
     /// Show the currently active account (based on CLAUDE_CONFIG_DIR)
     Active {
@@ -103,9 +94,8 @@ fn main() -> Result<()> {
             alias,
             dir,
             description,
-            no_login,
         } => {
-            commands::add::run(&alias, dir.as_ref(), description.as_deref(), no_login)?;
+            commands::add::run(&alias, dir.as_ref(), description.as_deref())?;
         }
 
         Command::List { names_only } => {
@@ -138,14 +128,6 @@ fn main() -> Result<()> {
                     None => println!("기본 계정이 설정되지 않았습니다."),
                 }
             }
-        }
-
-        Command::Login { alias } => {
-            commands::login::run_login(&alias)?;
-        }
-
-        Command::Logout { alias } => {
-            commands::login::run_logout(&alias)?;
         }
 
         Command::Active { short } => {

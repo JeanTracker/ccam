@@ -13,10 +13,13 @@ pub fn run(alias: &str) -> Result<()> {
         account.config_dir.display()
     );
     // stderr: user-facing messages (not captured by eval)
-    let auth = claude::auth_status(&account.config_dir);
-    match auth.display_info() {
-        Some(info) => eprintln!("Switched to account: {}  {}", alias.bold(), info.dimmed()),
-        None => eprintln!("Switched to account: {}", alias.bold()),
+    eprintln!("Switched to account: {}", alias.bold());
+    if !claude::auth_status(&account.config_dir).keychain {
+        eprintln!(
+            "{} 로그인이 필요합니다. {} 를 실행하세요.",
+            "⚠".yellow(),
+            "claude".cyan()
+        );
     }
     Ok(())
 }
