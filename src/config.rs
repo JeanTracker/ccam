@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, bail};
 use chrono::Utc;
+use colored::Colorize;
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,6 +13,25 @@ pub struct Account {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub added_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subscription_type: Option<String>,
+}
+
+impl Account {
+    /// Returns the email if known, otherwise an empty string.
+    pub fn display_name(&self) -> &str {
+        self.email.as_deref().unwrap_or("")
+    }
+
+    /// Returns a formatted, colored subscription suffix like ` (pro)`, or empty string.
+    pub fn sub_tag(&self) -> String {
+        self.subscription_type
+            .as_deref()
+            .map(|s| format!(" ({})", s.truecolor(100, 150, 160)))
+            .unwrap_or_default()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -153,6 +173,8 @@ pub fn add_account(
         config_dir: expanded,
         description,
         added_at: Utc::now().to_rfc3339(),
+        email: None,
+        subscription_type: None,
     };
     cfg.accounts.insert(alias.to_string(), account.clone());
     save(&cfg)?;
@@ -192,6 +214,21 @@ pub fn set_default(alias: Option<&str>) -> Result<()> {
         }
         None => cfg.default = None,
     }
+    save(&cfg)
+}
+
+pub fn update_account_user_info(
+    alias: &str,
+    email: Option<String>,
+    subscription_type: Option<String>,
+) -> Result<()> {
+    let mut cfg = load()?;
+    let account = cfg
+        .accounts
+        .get_mut(alias)
+        .with_context(|| format!("account '{}' not found", alias))?;
+    account.email = email;
+    account.subscription_type = subscription_type;
     save(&cfg)
 }
 

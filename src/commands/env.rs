@@ -13,10 +13,27 @@ pub fn run(alias: &str) -> Result<()> {
         account.config_dir.display()
     );
     // stderr: user-facing messages (not captured by eval)
-    eprintln!("Switched to account: {}", alias.bold());
-    if !claude::auth_status(&account.config_dir).keychain {
+    if claude::auth_status(&account.config_dir).keychain {
+        // Refresh stored user info on each switch (picks up logins done outside ccm)
+        if let Some(info) = claude::fetch_user_info(&account.config_dir) {
+            let _ = config::update_account_user_info(
+                alias,
+                Some(info.email.clone()),
+                Some(info.subscription_type.clone()),
+            );
+            eprintln!(
+                "* {} {} ({})",
+                alias.green().bold(),
+                info.email.dimmed(),
+                info.subscription_type
+            );
+        } else {
+            eprintln!("* {}", alias.green().bold());
+        }
+    } else {
+        eprintln!("* {}", alias.green().bold());
         eprintln!(
-            "{} 로그인이 필요합니다. {} 를 실행하세요.",
+            "  {} 로그인이 필요합니다. {} 를 실행하세요.",
             "⚠".yellow(),
             "claude".cyan()
         );
