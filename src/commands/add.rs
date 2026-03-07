@@ -36,5 +36,19 @@ pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>) -> Res
         default_tag,
     );
     claude::run(&account.config_dir)?;
+
+    // Best-effort: capture user info written to Keychain during login
+    if let Some(info) = claude::fetch_user_info(&account.config_dir) {
+        let _ = config::update_account_user_info(
+            alias,
+            Some(info.email.clone()),
+            Some(info.subscription_type.clone()),
+        );
+        eprintln!(
+            "      {} ({})",
+            info.email.dimmed(),
+            info.subscription_type.dimmed()
+        );
+    }
     Ok(())
 }

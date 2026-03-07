@@ -81,6 +81,41 @@ pub fn logout(config_dir: &Path) -> Result<()> {
     Ok(())
 }
 
+/// User information returned by `claude auth status`.
+pub struct UserInfo {
+    pub email: String,
+    pub subscription_type: String,
+}
+
+/// Runs `claude auth status` and parses user info from its JSON output.
+/// Returns `None` if not logged in or the command fails.
+pub fn fetch_user_info(config_dir: &Path) -> Option<UserInfo> {
+    let claude = find_claude().ok()?;
+    let mut cmd = Command::new(&claude);
+    cmd.args(["auth", "status", "--json"]);
+    if !is_default_config_dir(config_dir) {
+        cmd.env("CLAUDE_CONFIG_DIR", config_dir);
+    }
+    let output = cmd.output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).ok()?;
+    if json.get("loggedIn").and_then(|v| v.as_bool()) != Some(true) {
+        return None;
+    }
+    let email = json.get("email")?.as_str()?.to_string();
+    let subscription_type = json
+        .get("subscriptionType")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown")
+        .to_string();
+    Some(UserInfo {
+        email,
+        subscription_type,
+    })
+}
+
 pub fn dir_keychain_service(config_dir: &Path) -> String {
     use sha2::{Digest, Sha256};
     use std::fmt::Write;

@@ -47,18 +47,12 @@ pub fn run(names_only: bool) -> Result<()> {
 
     for (alias, account) in &accounts {
         let is_default = cfg.default.as_deref() == Some(alias.as_str());
+        let prefix = if is_default { "* " } else { "  " };
         let alias_str = if is_default {
             alias.cyan().bold().to_string()
         } else {
             alias.bold().to_string()
         };
-        let default_tag = if is_default {
-            format!(" {}", "(default)".truecolor(100, 150, 160))
-        } else {
-            String::new()
-        };
-
-        let account_str = account.config_dir.display().to_string();
 
         let desc = account
             .description
@@ -67,10 +61,11 @@ pub fn run(names_only: bool) -> Result<()> {
             .unwrap_or_default();
 
         println!(
-            "  {}{} {}{}",
+            "{}{} {}{}{}",
+            prefix,
             alias_str,
-            default_tag,
-            account_str.dimmed(),
+            account.display_name().dimmed(),
+            account.sub_tag(),
             desc
         );
     }

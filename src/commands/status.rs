@@ -20,7 +20,10 @@ pub fn run_current(short: bool) -> Result<()> {
                 }
                 // short 모드에서 미등록 경로면 아무것도 출력하지 않음
             } else if let Some(a) = alias {
-                println!("{} ({})", a.green().bold(), dir);
+                let account = cfg.accounts.get(a);
+                let name = account.map(|ac| ac.display_name()).unwrap_or("");
+                let sub_tag = account.map(|ac| ac.sub_tag()).unwrap_or_default();
+                println!("* {} {}{}", a.green().bold(), name.dimmed(), sub_tag);
             } else {
                 println!("{} (ccm 미등록 경로)", dir.yellow());
             }
@@ -82,13 +85,22 @@ fn print_summary(
         "미로그인".yellow()
     };
 
-    let dir_str = if dir_exists {
-        account.config_dir.display().to_string().normal()
+    let display = if dir_exists {
+        account.display_name().normal()
     } else {
-        account.config_dir.display().to_string().red()
+        account.display_name().red()
     };
 
-    println!("{}{:<12} {}  [{}]", prefix, alias.bold(), dir_str, auth_str,);
+    let sub_tag = account.sub_tag();
+
+    println!(
+        "{}{:<12} {}{}  [{}]",
+        prefix,
+        alias.bold(),
+        display,
+        sub_tag,
+        auth_str,
+    );
 }
 
 fn print_detailed(
@@ -123,4 +135,8 @@ fn print_detailed(
         "✗".dimmed()
     };
     println!("  인증    Keychain {}", keychain_icon);
+    if let Some(email) = &account.email {
+        let sub = account.subscription_type.as_deref().unwrap_or("unknown");
+        println!("  계정    {} ({})", email, sub);
+    }
 }
