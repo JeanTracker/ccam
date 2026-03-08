@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-03-08
+
+### Changed
+- Auto-tag on master merge when Cargo.toml version changes
+
 ## [0.3.0] - 2026-03-08
 
 ### Added
