@@ -2,15 +2,45 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - master
 
 permissions:
   contents: write
 
 jobs:
+  check:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skip: ${{ steps.check_tag.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      - name: Read version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          if git ls-remote --tags origin "$TAG" | grep -q .; then
+            echo "Tag $TAG already exists, skipping release."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
     name: Build ${{ matrix.target }}
+    needs: check
+    if: needs.check.outputs.skip == 'false'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -51,9 +81,10 @@ jobs:
           name: ccam-${{ matrix.target }}
           path: ccam-${{ matrix.target }}.tar.gz
 
-  release:
-    name: Create Release
-    needs: build
+  publish:
+    name: Publish release
+    needs: [check, build]
+    if: needs.check.outputs.skip == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -63,6 +94,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ needs.check.outputs.version }}
           files: |
             ccam-aarch64-apple-darwin.tar.gz
             ccam-x86_64-apple-darwin.tar.gz
