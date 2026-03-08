@@ -6,8 +6,12 @@ ccam() {
   if [[ "$cmd" == "use" ]]; then
     local alias="${2:-}"
     if [[ -z "$alias" ]]; then
-      echo "Usage: ccam use <alias>" >&2
+      printf "error: the following required arguments were not provided:\n  <ALIAS>\n\nUsage: ccam use <ALIAS>\n\nFor more information, try '--help'.\n" >&2
       return 1
+    fi
+    if [[ "$alias" == -* ]]; then
+      command ccam "$@"
+      return $?
     fi
     local output
     output="$(command ccam __env "$alias" 2>/tmp/ccam_err)"
@@ -29,13 +33,13 @@ if [[ -n "$BASH_VERSION" ]]; then
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
     case "$prev" in
-      use|remove|login|logout|status|env)
+      use|remove|status)
         local accounts
         accounts="$(command ccam list --names-only 2>/dev/null)"
         COMPREPLY=($(compgen -W "$accounts" -- "$cur"))
         ;;
       *)
-        COMPREPLY=($(compgen -W "add list remove use env login logout active status default keychain" -- "$cur"))
+        COMPREPLY=($(compgen -W "add list remove use active status default keychain" -- "$cur"))
         ;;
     esac
   }
