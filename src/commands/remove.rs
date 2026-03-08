@@ -6,37 +6,37 @@ use std::fs;
 pub fn run(alias: &str) -> Result<()> {
     let account = config::get_account(alias)?;
 
-    if !confirm::confirm_yn(&format!("'{}' 계정을 제거하시겠습니까?", alias)) {
-        println!("취소되었습니다.");
+    if !confirm::confirm_yn(&format!("Remove account '{}'?", alias)) {
+        eprintln!("Cancelled.");
         return Ok(());
     }
 
     // Step 1: logout to clean Keychain
-    println!("Keychain 항목 정리 중...");
+    eprintln!("Cleaning up Keychain entry...");
     if let Err(e) = claude::logout(&account.config_dir) {
         eprintln!(
-            "{} claude logout 실패 (Keychain 항목이 남아있을 수 있음): {}",
-            "경고:".yellow(),
+            "{} claude logout failed (Keychain entry may remain): {}",
+            "warning:".yellow(),
             e
         );
     }
 
     // Step 2: remove from accounts.toml
     config::remove_account(alias)?;
-    println!("accounts.toml에서 '{}' 제거 완료.", alias);
+    eprintln!("Removed '{}' from accounts.toml.", alias);
 
     // Step 3: delete config directory (skip if it's the default ~/.claude)
     if claude::is_default_config_dir(&account.config_dir) {
-        println!(
-            "{} 기본 디렉토리({})는 삭제하지 않습니다.",
-            "참고:".yellow(),
+        eprintln!(
+            "{} Skipping deletion of default directory: {}",
+            "note:".yellow(),
             account.config_dir.display()
         );
     } else if account.config_dir.exists() {
         fs::remove_dir_all(&account.config_dir)?;
-        println!("디렉토리 삭제 완료: {}", account.config_dir.display());
+        eprintln!("Deleted directory: {}", account.config_dir.display());
     }
 
-    println!("{}", format!("'{}' 계정이 제거되었습니다.", alias).green());
+    eprintln!("{}", format!("Account '{}' removed.", alias).green());
     Ok(())
 }

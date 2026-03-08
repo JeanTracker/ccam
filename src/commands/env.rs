@@ -39,7 +39,7 @@ pub fn run(alias: &str) -> Result<()> {
     } else {
         eprintln!("* {}", alias.green().bold());
         eprintln!(
-            "  {} 로그인이 필요합니다. {} 를 실행하세요.",
+            "  {} not logged in. Run {} to log in.",
             "⚠".yellow(),
             "claude".cyan()
         );

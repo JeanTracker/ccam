@@ -9,9 +9,9 @@ pub fn run(names_only: bool) -> Result<()> {
         if names_only {
             return Ok(());
         }
-        println!("등록된 계정이 없습니다.");
+        println!("No accounts registered.");
         println!();
-        println!("계정 추가: {}", "ccm add <별칭>".cyan());
+        println!("Add an account: {}", "ccm add <alias>".cyan());
 
         // Hint about existing ~/.claude
         let default_claude = dirs::home_dir().map(|h| h.join(".claude"));
@@ -20,15 +20,15 @@ pub fn run(names_only: bool) -> Result<()> {
         {
             println!();
             println!(
-                "{} 기존 Claude 디렉토리({})가 감지되었습니다.",
-                "참고:".yellow().bold(),
+                "{} Existing Claude directory detected: {}",
+                "note:".yellow().bold(),
                 path.display()
             );
             println!(
-                "  {} 기존 디렉토리를 재활용 (재로그인 필요)",
-                "ccm add <별칭> --dir ~/.claude".to_string().cyan()
+                "  {} reuse existing directory (re-login required)",
+                "ccm add <alias> --dir ~/.claude".to_string().cyan()
             );
-            println!("  {} 새 계정 추가", "ccm add <별칭>".cyan());
+            println!("  {} create a new account", "ccm add <alias>".cyan());
         }
         return Ok(());
     }

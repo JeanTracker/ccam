@@ -121,11 +121,11 @@ fn main() -> Result<()> {
                 }
             } else if let Some(a) = alias {
                 config::set_default(Some(&a))?;
-                eprintln!("기본 계정: {}", a);
+                eprintln!("Default account set to: {}", a);
             } else {
                 match config::get_default()? {
-                    Some(d) => println!("기본 계정: {}", d),
-                    None => println!("기본 계정이 설정되지 않았습니다."),
+                    Some(d) => eprintln!("Default account: {}", d),
+                    None => eprintln!("No default account set."),
                 }
             }
         }
