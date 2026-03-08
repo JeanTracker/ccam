@@ -1,4 +1,4 @@
-use crate::config;
+use crate::{claude, config};
 use anyhow::Result;
 use colored::Colorize;
 
@@ -47,7 +47,7 @@ pub fn run(names_only: bool) -> Result<()> {
 
     for (alias, account) in &accounts {
         let is_default = cfg.default.as_deref() == Some(alias.as_str());
-        let prefix = if is_default { "* " } else { "  " };
+        let logged_in = claude::auth_status(&account.config_dir).keychain;
         let alias_str = if is_default {
             alias.cyan().bold().to_string()
         } else {
@@ -60,14 +60,26 @@ pub fn run(names_only: bool) -> Result<()> {
             .map(|d| format!("  {}", d.dimmed()))
             .unwrap_or_default();
 
-        println!(
-            "{}{} {}{}{}",
-            prefix,
-            alias_str,
-            account.display_name().dimmed(),
-            account.sub_tag(),
-            desc
-        );
+        if logged_in {
+            let prefix = if is_default { "* " } else { "  " };
+            println!(
+                "{}{} {}{}{}",
+                prefix,
+                alias_str,
+                account.display_name().dimmed(),
+                account.sub_tag(),
+                desc
+            );
+        } else {
+            println!(
+                "{} {} {}{}{}",
+                "!".yellow(),
+                alias_str,
+                account.display_name().dimmed(),
+                account.sub_tag(),
+                desc
+            );
+        }
     }
     Ok(())
 }

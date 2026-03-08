@@ -54,15 +54,15 @@ enum Command {
         get: bool,
     },
 
-    /// Show the currently active account (based on CLAUDE_CONFIG_DIR)
-    Active {
-        /// Print only the account alias (for shell prompt integration)
-        #[arg(long)]
-        short: bool,
-    },
+    /// Show the currently active account
+    Active,
 
-    /// Show login status of accounts
-    Status { alias: Option<String> },
+    /// Show details for an account
+    Status {
+        /// Alias of the account to inspect
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+    },
 
     #[command(hide = true)]
     Init { shell: String },
@@ -130,12 +130,12 @@ fn main() -> Result<()> {
             }
         }
 
-        Command::Active { short } => {
-            commands::status::run_current(short)?;
+        Command::Active => {
+            commands::status::run_current()?;
         }
 
         Command::Status { alias } => {
-            commands::status::run_status(alias.as_deref())?;
+            commands::status::run_status(&alias)?;
         }
 
         Command::Init { shell } => {

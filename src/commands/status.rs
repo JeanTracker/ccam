@@ -1,9 +1,9 @@
 use crate::{claude, config};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use colored::Colorize;
 use std::env;
 
-pub fn run_current(short: bool) -> Result<()> {
+pub fn run_current() -> Result<()> {
     match env::var("CLAUDE_CONFIG_DIR") {
         Ok(dir) => {
             let cfg = config::load()?;
@@ -14,93 +14,48 @@ pub fn run_current(short: bool) -> Result<()> {
                     None
                 }
             });
-            if short {
-                if let Some(a) = alias {
-                    println!("{}", a);
-                }
-                // In short mode, print nothing for unregistered paths
-            } else if let Some(a) = alias {
+            if let Some(a) = alias {
                 let account = cfg.accounts.get(a);
+                let logged_in = account
+                    .map(|ac| claude::auth_status(&ac.config_dir).keychain)
+                    .unwrap_or(false);
                 let name = account.map(|ac| ac.display_name()).unwrap_or("");
                 let sub_tag = account.map(|ac| ac.sub_tag()).unwrap_or_default();
-                println!("* {} {}{}", a.green().bold(), name.dimmed(), sub_tag);
+                if logged_in {
+                    println!("* {} {}{}", a.green().bold(), name.dimmed(), sub_tag);
+                } else {
+                    println!(
+                        "{} {} {}{}",
+                        "!".yellow(),
+                        a.green().bold(),
+                        name.dimmed(),
+                        sub_tag
+                    );
+                }
             } else {
                 println!("{} (not registered in ccm)", dir.yellow());
             }
         }
         Err(_) => {
-            if !short {
-                println!(
-                    "{}",
-                    "CLAUDE_CONFIG_DIR not set (default: ~/.claude, unmanaged by ccm)".dimmed()
-                );
-            }
+            println!(
+                "{}",
+                "CLAUDE_CONFIG_DIR not set (default: ~/.claude, unmanaged by ccm)".dimmed()
+            );
         }
     }
     Ok(())
 }
 
-pub fn run_status(alias: Option<&str>) -> Result<()> {
+pub fn run_status(alias: &str) -> Result<()> {
     let cfg = config::load()?;
-
-    let accounts: Vec<(&String, &config::Account)> = if let Some(a) = alias {
-        match cfg.accounts.get_key_value(a) {
-            Some((k, v)) => vec![(k, v)],
-            None => anyhow::bail!("account '{}' not found", a),
-        }
-    } else {
-        let mut v: Vec<_> = cfg.accounts.iter().collect();
-        v.sort_by_key(|(k, _)| k.as_str());
-        v
-    };
-
-    let single = accounts.len() == 1 && alias.is_some();
-
-    for (alias, account) in &accounts {
-        let auth = claude::auth_status(&account.config_dir);
-        let dir_exists = account.config_dir.exists();
-
-        if single {
-            print_detailed(alias, account, &auth, dir_exists, &cfg);
-        } else {
-            print_summary(alias, account, &auth, dir_exists, &cfg);
-        }
-    }
+    let (key, account) = cfg
+        .accounts
+        .get_key_value(alias)
+        .with_context(|| format!("account '{}' not found", alias))?;
+    let auth = claude::auth_status(&account.config_dir);
+    let dir_exists = account.config_dir.exists();
+    print_detailed(key, account, &auth, dir_exists, &cfg);
     Ok(())
-}
-
-fn print_summary(
-    alias: &str,
-    account: &config::Account,
-    auth: &claude::AuthStatus,
-    dir_exists: bool,
-    cfg: &config::AccountsConfig,
-) {
-    let is_default = cfg.default.as_deref() == Some(alias);
-    let prefix = if is_default { "* " } else { "  " };
-
-    let auth_str = if auth.keychain {
-        "logged in".green()
-    } else {
-        "not logged in".yellow()
-    };
-
-    let display = if dir_exists {
-        account.display_name().normal()
-    } else {
-        account.display_name().red()
-    };
-
-    let sub_tag = account.sub_tag();
-
-    println!(
-        "{}{:<12} {}{}  [{}]",
-        prefix,
-        alias.bold(),
-        display,
-        sub_tag,
-        auth_str,
-    );
 }
 
 fn print_detailed(
