@@ -5,7 +5,7 @@ use colored::Colorize;
 /// Internal command: outputs `export CLAUDE_CONFIG_DIR="..."` to stdout.
 /// Shell function wraps `ccm use` by eval-ing this output.
 /// User-facing messages must go to stderr only.
-pub fn run(alias: &str) -> Result<()> {
+pub fn run(alias: &str, no_refresh: bool) -> Result<()> {
     let account = config::get_account(alias)?;
     // stdout: only the export statement for eval
     // If the account uses the default ~/.claude directory, unset CLAUDE_CONFIG_DIR so Claude Code
@@ -17,6 +17,9 @@ pub fn run(alias: &str) -> Result<()> {
             "export CLAUDE_CONFIG_DIR=\"{}\"",
             account.config_dir.display()
         );
+    }
+    if no_refresh {
+        return Ok(());
     }
     // stderr: user-facing messages (not captured by eval)
     if claude::auth_status(&account.config_dir).keychain {
@@ -37,12 +40,7 @@ pub fn run(alias: &str) -> Result<()> {
             eprintln!("* {}", alias.green().bold());
         }
     } else {
-        eprintln!("* {}", alias.green().bold());
-        eprintln!(
-            "  {} not logged in. Run {} to log in.",
-            "⚠".yellow(),
-            "claude".cyan()
-        );
+        eprintln!("{} {}", "!".yellow(), alias.green().bold());
     }
     Ok(())
 }
