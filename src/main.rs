@@ -1,58 +1,81 @@
-mod claude;
-mod commands;
-mod config;
-mod confirm;
-
 use anyhow::Result;
+use ccam::{commands, config};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "ccam", about = "Claude Code multi-account manager", version)]
+#[command(
+    name = "ccam",
+    about = "Claude Code multi-account manager",
+    version = env!("CARGO_PKG_VERSION"),
+    disable_version_flag = true
+)]
 struct Cli {
+    /// Print version
+    #[arg(short = 'v', long, action = clap::ArgAction::Version)]
+    version: (),
     #[command(subcommand)]
     command: Command,
 }
 
 #[derive(Subcommand)]
 enum Command {
-    /// Add a new account (login via `claude` after switching with `ccam use`)
+    /// Add a new account
+    #[command(
+        after_help = "If ~/.claude already exists, import it: ccam add <ALIAS> --dir ~/.claude"
+    )]
     Add {
+        /// Alias to identify the account
+        #[arg(value_name = "ALIAS")]
         alias: String,
         /// Use an existing directory instead of creating a new one
-        #[arg(long)]
+        #[arg(long, value_name = "PATH")]
         dir: Option<PathBuf>,
-        #[arg(long, short)]
+        /// Short description for the account
+        #[arg(long, short, value_name = "TEXT")]
         description: Option<String>,
     },
 
     /// List all registered accounts
+    #[command(visible_alias = "ls")]
     List {
-        /// Print account names only (for shell completion)
-        #[arg(long)]
+        #[arg(long, hide = true)]
         names_only: bool,
     },
 
     /// Remove an account and delete its config directory
-    Remove { alias: String },
+    #[command(visible_alias = "rm")]
+    Remove {
+        /// Alias of the account to remove
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+    },
 
     /// [Internal] Output `export CLAUDE_CONFIG_DIR=...` for eval
     #[command(name = "__env", hide = true)]
     InternalEnv {
+        #[arg(value_name = "ALIAS")]
         alias: String,
         /// Skip fetching user info (used during shell init to avoid startup delay)
         #[arg(long)]
         no_refresh: bool,
     },
 
-    /// Switch to an account in the current shell (use via: eval "$(ccam use <alias>)")
-    Use { alias: String },
+    /// Switch to an account in the current shell
+    Use {
+        /// Alias of the account to switch to
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+    },
 
     /// Set or get the default account
+    #[command(after_help = "To print the current default: ccam default --get")]
     Default {
+        /// Account alias to set as default
+        #[arg(value_name = "ALIAS", required_unless_present = "get")]
         alias: Option<String>,
         /// Print the current default account name
-        #[arg(long)]
+        #[arg(long, short)]
         get: bool,
     },
 
@@ -67,7 +90,10 @@ enum Command {
     },
 
     #[command(hide = true)]
-    Init { shell: String },
+    Init {
+        #[arg(value_name = "SHELL")]
+        shell: String,
+    },
 
     #[command(hide = true)]
     Keychain {
@@ -85,7 +111,10 @@ enum KeychainCommand {
     /// Remove the legacy default Keychain entry (requires 'yes' confirmation)
     CleanDefault,
     /// Remove Keychain entry for a specific account (requires 'yes' confirmation)
-    Remove { alias: String },
+    Remove {
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -111,7 +140,6 @@ fn main() -> Result<()> {
         Command::InternalEnv { alias, no_refresh } => {
             commands::env::run(&alias, no_refresh)?;
         }
-
         Command::Use { alias } => {
             commands::env::run(&alias, false)?;
         }
@@ -124,11 +152,6 @@ fn main() -> Result<()> {
             } else if let Some(a) = alias {
                 config::set_default(Some(&a))?;
                 eprintln!("Default account set to: {}", a);
-            } else {
-                match config::get_default()? {
-                    Some(d) => eprintln!("Default account: {}", d),
-                    None => eprintln!("No default account set."),
-                }
             }
         }
 

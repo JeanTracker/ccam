@@ -6,8 +6,12 @@ function ccam() {
   if [[ "$cmd" == "use" ]]; then
     local alias="${2:-}"
     if [[ -z "$alias" ]]; then
-      echo "Usage: ccam use <alias>" >&2
+      printf "error: the following required arguments were not provided:\n  <ALIAS>\n\nUsage: ccam use <ALIAS>\n\nFor more information, try '--help'.\n" >&2
       return 1
+    fi
+    if [[ "$alias" == -* ]]; then
+      command ccam "$@"
+      return $?
     fi
     local output
     output="$(command ccam __env "$alias" 2>/tmp/ccam_err)"
@@ -29,9 +33,9 @@ if (( $+functions[compdef] )); then
     local -a accounts
     accounts=(${(f)"$(command ccam list --names-only 2>/dev/null)"})
     local -a cmds
-    cmds=(add list remove use env login logout active status default keychain)
+    cmds=(add list remove use active status default keychain)
     case "$words[2]" in
-      use|remove|login|logout|status|env)
+      use|remove|status)
         _describe 'accounts' accounts
         ;;
       *)

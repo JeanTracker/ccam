@@ -5,8 +5,12 @@ function ccam
   if test "$argv[1]" = "use"
     set alias $argv[2]
     if test -z "$alias"
-      echo "Usage: ccam use <alias>" >&2
+      printf "error: the following required arguments were not provided:\n  <ALIAS>\n\nUsage: ccam use <ALIAS>\n\nFor more information, try '--help'.\n" >&2
       return 1
+    end
+    if string match -q -- '-*' "$alias"
+      command ccam $argv
+      return $status
     end
     set output (command ccam __env $alias 2>/tmp/ccam_err)
     set exit_code $status
@@ -27,9 +31,9 @@ function __ccam_accounts
 end
 
 complete -c ccam -f
-complete -c ccam -n "__fish_use_subcommand use remove login logout status env" -a "(__ccam_accounts)"
-complete -c ccam -n "not __fish_seen_subcommand_from add list remove use env login logout active status default keychain" \
-  -a "add list remove use env login logout active status default keychain"
+complete -c ccam -n "__fish_use_subcommand use remove status" -a "(__ccam_accounts)"
+complete -c ccam -n "not __fish_seen_subcommand_from add list remove use active status default keychain" \
+  -a "add list remove use active status default keychain"
 
 # Apply default account on new session
 set _ccam_default (command ccam default --get 2>/dev/null)
