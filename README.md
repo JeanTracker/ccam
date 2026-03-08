@@ -104,19 +104,14 @@ ccam init fish | source
 ### Add an account
 
 ```bash
-ccam add account1                          # Create ~/.claude-accounts/account1
-ccam add account2 --description "Work"    # With a description
+ccam add alice                             # Create ~/.claude-accounts/alice
+ccam add bob --description "Secondary"    # With a description
 ccam add main --dir ~/.claude             # Reuse an existing directory
 ```
 
 The first account added is automatically set as the default.
 
-After adding, switch to the account and run `claude` to log in through Claude Code's built-in login flow:
-
-```bash
-ccam use account1
-claude
-```
+`ccam add` launches Claude Code immediately so you can complete the login flow right away.
 
 ### Switch accounts
 
@@ -130,33 +125,35 @@ When a new terminal opens, the default account is applied automatically via the 
 
 ```bash
 ccam list
-  account1 user1 <user1@example.com>
-  account2 (default) user2 <user2@example.com>
+* account1 user1@example.com (pro)
+  account2 user2@example.com (pro)
+! account3
 ```
+
+`*` marks the default account. `!` indicates not logged in.
 
 ### Active account
 
 ```bash
 ccam active            # Show the active account in the current session
-ccam active --short    # Print only the alias (useful for shell prompt integration)
 ```
 
 ### Auth status
 
 ```bash
-ccam status             # Summary of all accounts
 ccam status account1    # Detailed info for a specific account
 account1 (default)
-  path    /Users/username/.claude-accounts/account1
-  added   2026-03-05
-  auth    Keychain ✓
+  path     /Users/username/.claude-accounts/account1
+  added    2026-03-05
+  auth     Keychain ✓
+  account  user1@example.com (pro)
 ```
 
 ### Default account
 
 ```bash
-ccam default account1   # Set default account
-ccam default            # Show current default
+ccam default account1    # Set default account
+ccam default --get       # Show current default
 ```
 
 ### Remove an account
@@ -188,12 +185,15 @@ default = "account1"
 
 [accounts.account1]
 config_dir = "/Users/username/.claude-accounts/account1"
-description = "Second account"
 added_at = "2026-03-05T09:00:00Z"
+email = "user1@example.com"
+subscription_type = "pro"
 
 [accounts.account2]
 config_dir = "/Users/username/.claude-accounts/account2"
 added_at = "2026-03-05T10:00:00Z"
+email = "user2@example.com"
+subscription_type = "pro"
 ```
 
 Tokens and credentials are never stored here — only paths and metadata.
