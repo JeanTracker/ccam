@@ -38,10 +38,12 @@ enum Command {
 
     /// [Internal] Output `export CLAUDE_CONFIG_DIR=...` for eval
     #[command(name = "__env", hide = true)]
-    InternalEnv { alias: String },
-
-    #[command(hide = true)]
-    Env { alias: String },
+    InternalEnv {
+        alias: String,
+        /// Skip fetching user info (used during shell init to avoid startup delay)
+        #[arg(long)]
+        no_refresh: bool,
+    },
 
     /// Switch to an account in the current shell (use via: eval "$(ccam use <alias>)")
     Use { alias: String },
@@ -106,12 +108,12 @@ fn main() -> Result<()> {
             commands::remove::run(&alias)?;
         }
 
-        Command::InternalEnv { alias } | Command::Env { alias } => {
-            commands::env::run(&alias)?;
+        Command::InternalEnv { alias, no_refresh } => {
+            commands::env::run(&alias, no_refresh)?;
         }
 
         Command::Use { alias } => {
-            commands::env::run(&alias)?;
+            commands::env::run(&alias, false)?;
         }
 
         Command::Default { alias, get } => {

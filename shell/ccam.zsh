@@ -45,7 +45,7 @@ fi
 # Apply default account on new session (only if default is set)
 _ccam_default="$(command ccam default --get 2>/dev/null)"
 if [[ -n "$_ccam_default" ]]; then
-  eval "$(command ccam __env "$_ccam_default" 2>/dev/null)"
+  eval "$(command ccam __env --no-refresh "$_ccam_default" 2>/dev/null)"
 fi
 unset _ccam_default
 

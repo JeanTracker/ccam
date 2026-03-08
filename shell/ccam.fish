@@ -34,7 +34,7 @@ complete -c ccam -n "not __fish_seen_subcommand_from add list remove use env log
 # Apply default account on new session
 set _ccam_default (command ccam default --get 2>/dev/null)
 if test -n "$_ccam_default"
-  eval (command ccam __env $_ccam_default 2>/dev/null)
+  eval (command ccam __env --no-refresh $_ccam_default 2>/dev/null)
 end
 set -e _ccam_default
 
