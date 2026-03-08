@@ -9,9 +9,9 @@ pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>) -> Res
         None => config::accounts_dir().join(alias),
     };
 
-    println!("[1/2] Preparing directory: {}", config_dir.display());
+    eprintln!("[1/2] Preparing directory: {}", config_dir.display());
     let account = config::add_account(alias, config_dir.clone(), description.map(str::to_string))?;
-    println!(
+    eprintln!(
         "      {}",
         account.config_dir.display().to_string().dimmed()
     );
@@ -30,7 +30,7 @@ pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>) -> Res
     } else {
         String::new()
     };
-    println!(
+    eprintln!(
         "[2/2] {} ready.{} Starting claude...",
         alias.green().bold(),
         default_tag,
