@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-03-08
+
+### Added
+- Auto-run Claude Code on `ccam add` to complete login immediately after account creation
+- Fetch and cache user email and subscription type per account via `claude auth status`
+- Display login state and user info in `ccam list` and `ccam active`
+- `--no-refresh` flag for shell init to skip keychain refresh on shell startup
+
+### Changed
+- `ccam list`: show `*` prefix for default account, `!` for unauthenticated accounts
+- `ccam status <alias>`: add `account` line showing email and subscription type
+- Removed separate login/logout subcommands; login is handled through Claude Code directly
+- All code, comments, and user-facing strings translated to English
+
+### Fixed
+- Preserve existing login when adding or switching to an account backed by `~/.claude`
+
 ## [0.2.0] - 2026-03-06
 
 ### Added
