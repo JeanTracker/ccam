@@ -18,21 +18,21 @@ pub fn run_current(short: bool) -> Result<()> {
                 if let Some(a) = alias {
                     println!("{}", a);
                 }
-                // short 모드에서 미등록 경로면 아무것도 출력하지 않음
+                // In short mode, print nothing for unregistered paths
             } else if let Some(a) = alias {
                 let account = cfg.accounts.get(a);
                 let name = account.map(|ac| ac.display_name()).unwrap_or("");
                 let sub_tag = account.map(|ac| ac.sub_tag()).unwrap_or_default();
                 println!("* {} {}{}", a.green().bold(), name.dimmed(), sub_tag);
             } else {
-                println!("{} (ccm 미등록 경로)", dir.yellow());
+                println!("{} (not registered in ccm)", dir.yellow());
             }
         }
         Err(_) => {
             if !short {
                 println!(
                     "{}",
-                    "CLAUDE_CONFIG_DIR 미설정 (기본값: ~/.claude, ccm 미관리)".dimmed()
+                    "CLAUDE_CONFIG_DIR not set (default: ~/.claude, unmanaged by ccm)".dimmed()
                 );
             }
         }
@@ -80,9 +80,9 @@ fn print_summary(
     let prefix = if is_default { "* " } else { "  " };
 
     let auth_str = if auth.keychain {
-        "로그인".green()
+        "logged in".green()
     } else {
-        "미로그인".yellow()
+        "not logged in".yellow()
     };
 
     let display = if dir_exists {
@@ -112,21 +112,21 @@ fn print_detailed(
 ) {
     let is_default = cfg.default.as_deref() == Some(alias);
     let default_tag = if is_default {
-        " (기본)".cyan().to_string()
+        " (default)".cyan().to_string()
     } else {
         String::new()
     };
 
     println!("{}{}", alias.bold().green(), default_tag);
     println!(
-        "  경로    {}{}",
+        "  path     {}{}",
         account.config_dir.display(),
-        if dir_exists { "" } else { "  ⚠ 없음" }
+        if dir_exists { "" } else { "  ⚠ missing" }
     );
     if let Some(desc) = &account.description {
-        println!("  설명    {}", desc);
+        println!("  desc     {}", desc);
     }
-    println!("  추가일  {}", &account.added_at[..10]);
+    println!("  added    {}", &account.added_at[..10]);
 
     // Auth status
     let keychain_icon = if auth.keychain {
@@ -134,9 +134,9 @@ fn print_detailed(
     } else {
         "✗".dimmed()
     };
-    println!("  인증    Keychain {}", keychain_icon);
+    println!("  auth     Keychain {}", keychain_icon);
     if let Some(email) = &account.email {
         let sub = account.subscription_type.as_deref().unwrap_or("unknown");
-        println!("  계정    {} ({})", email, sub);
+        println!("  account  {} ({})", email, sub);
     }
 }

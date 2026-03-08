@@ -9,7 +9,7 @@ pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>) -> Res
         None => config::accounts_dir().join(alias),
     };
 
-    println!("[1/2] 디렉토리 준비: {}", config_dir.display());
+    println!("[1/2] Preparing directory: {}", config_dir.display());
     let account = config::add_account(alias, config_dir.clone(), description.map(str::to_string))?;
     println!(
         "      {}",
@@ -18,7 +18,7 @@ pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>) -> Res
     config::ensure_shared_symlinks()?;
     config::setup_account_symlinks(&account.config_dir)?;
 
-    // 첫 번째 계정이면 자동으로 default 설정
+    // Auto-set as default if this is the first account
     let cfg = config::load()?;
     let is_first = cfg.accounts.len() == 1 && cfg.default.is_none();
     if is_first {
@@ -26,12 +26,12 @@ pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>) -> Res
     }
 
     let default_tag = if is_first {
-        format!("  {}", "(기본 계정으로 설정됨)".dimmed())
+        format!("  {}", "(set as default)".dimmed())
     } else {
         String::new()
     };
     println!(
-        "[2/2] {} 완료.{} claude 를 시작합니다...",
+        "[2/2] {} ready.{} Starting claude...",
         alias.green().bold(),
         default_tag,
     );

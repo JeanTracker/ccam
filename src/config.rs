@@ -56,7 +56,7 @@ pub fn shared_dir() -> PathBuf {
     accounts_dir().join("shared")
 }
 
-/// 공유 대상 항목 (settings.json, CLAUDE.md, plugins/)
+/// Items shared across all accounts (settings.json, CLAUDE.md, plugins/)
 pub const SHARED_ITEMS: &[&str] = &["settings.json", "CLAUDE.md", "plugins"];
 
 fn is_symlink(path: &Path) -> bool {
@@ -72,7 +72,7 @@ fn create_symlink_if_needed(link: &Path, target: &Path) -> Result<()> {
     #[cfg(unix)]
     std::os::unix::fs::symlink(target, link).with_context(|| {
         format!(
-            "symlink {} -> {} 생성 실패",
+            "failed to create symlink {} -> {}",
             link.display(),
             target.display()
         )
@@ -80,8 +80,8 @@ fn create_symlink_if_needed(link: &Path, target: &Path) -> Result<()> {
     Ok(())
 }
 
-/// ~/.claude-accounts/shared/ 에 ~/.claude/ 를 가리키는 심볼릭 링크를 설정합니다.
-/// ~/.claude/ 가 없으면 생성합니다.
+/// Sets up symlinks in ~/.claude-accounts/shared/ pointing to ~/.claude/.
+/// Creates ~/.claude/ if it does not exist.
 pub fn ensure_shared_symlinks() -> Result<()> {
     let claude = claude_dir();
     let shared = shared_dir();
@@ -93,8 +93,8 @@ pub fn ensure_shared_symlinks() -> Result<()> {
     Ok(())
 }
 
-/// 계정 디렉토리에 ../shared/ 를 가리키는 심볼릭 링크를 설정합니다.
-/// account_dir 이 ~/.claude 자체인 경우 (--dir ~/.claude) 심볼릭 링크 불필요.
+/// Sets up symlinks in the account directory pointing to ../shared/.
+/// Skipped when account_dir is ~/.claude itself (--dir ~/.claude).
 pub fn setup_account_symlinks(account_dir: &Path) -> Result<()> {
     let claude = claude_dir();
     let canon_account = account_dir
@@ -109,12 +109,12 @@ pub fn setup_account_symlinks(account_dir: &Path) -> Result<()> {
         if is_symlink(&account_path) {
             continue;
         }
-        // 실제 파일/디렉토리가 있으면 ~/.claude/ 로 이동 후 제거
+        // If a real file/dir exists, move it to ~/.claude/ then remove the original
         if account_path.exists() {
             let claude_target = claude.join(name);
             if !claude_target.exists() {
                 fs::rename(&account_path, &claude_target)
-                    .with_context(|| format!("{} 이동 실패", account_path.display()))?;
+                    .with_context(|| format!("failed to move {}", account_path.display()))?;
             } else if account_path.is_dir() {
                 fs::remove_dir_all(&account_path)?;
             } else {
@@ -249,7 +249,7 @@ mod tests {
     use super::*;
     use std::sync::Mutex;
 
-    // HOME을 변경하는 테스트는 직렬 실행 필요 (전역 상태 충돌 방지)
+    // Tests that mutate HOME must run serially to avoid global state conflicts
     static HOME_LOCK: Mutex<()> = Mutex::new(());
 
     struct TestHome {
