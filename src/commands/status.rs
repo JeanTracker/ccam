@@ -3,6 +3,33 @@ use anyhow::{Context, Result};
 use colored::Colorize;
 use std::env;
 
+pub fn format_account_line(
+    alias: &str,
+    account: &config::Account,
+    logged_in: bool,
+    is_default: bool,
+) -> String {
+    let alias_str = if is_default {
+        alias.cyan().bold().to_string()
+    } else {
+        alias.bold().to_string()
+    };
+    let prefix = if !logged_in {
+        "! "
+    } else if is_default {
+        "* "
+    } else {
+        "  "
+    };
+    format!(
+        "{}{} {}{}",
+        prefix,
+        alias_str,
+        account.display_name().dimmed(),
+        account.sub_tag()
+    )
+}
+
 pub fn run_current() -> Result<()> {
     match env::var("CLAUDE_CONFIG_DIR") {
         Ok(dir) => {
@@ -15,32 +42,45 @@ pub fn run_current() -> Result<()> {
                 }
             });
             if let Some(a) = alias {
-                let account = cfg.accounts.get(a);
-                let logged_in = account
-                    .map(|ac| claude::auth_status(&ac.config_dir).keychain)
-                    .unwrap_or(false);
-                let name = account.map(|ac| ac.display_name()).unwrap_or("");
-                let sub_tag = account.map(|ac| ac.sub_tag()).unwrap_or_default();
-                if logged_in {
-                    println!("* {} {}{}", a.green().bold(), name.dimmed(), sub_tag);
-                } else {
-                    println!(
-                        "{} {} {}{}",
-                        "!".yellow(),
-                        a.green().bold(),
-                        name.dimmed(),
-                        sub_tag
-                    );
-                }
+                let account = cfg.accounts.get(a).unwrap();
+                let logged_in = claude::auth_status(&account.config_dir).keychain;
+                let is_default = cfg.default.as_deref() == Some(a);
+                println!("{}", format_account_line(a, account, logged_in, is_default));
             } else {
                 println!("{} (not registered in ccm)", dir.yellow());
             }
         }
         Err(_) => {
-            println!(
-                "{}",
-                "CLAUDE_CONFIG_DIR not set (default: ~/.claude, unmanaged by ccm)".dimmed()
-            );
+            // CLAUDE_CONFIG_DIR not set: active dir is ~/.claude
+            // Priority: 1) default account  2) earliest added (FIFO)
+            let cfg = config::load()?;
+            let uses_default_dir =
+                |v: &config::Account| claude::is_default_config_dir(&v.config_dir);
+            let alias = cfg
+                .default
+                .as_deref()
+                .filter(|d| cfg.accounts.get(*d).is_some_and(uses_default_dir))
+                .or_else(|| {
+                    let mut candidates: Vec<(&str, &config::Account)> = cfg
+                        .accounts
+                        .iter()
+                        .filter(|(_, v)| uses_default_dir(v))
+                        .map(|(k, v)| (k.as_str(), v))
+                        .collect();
+                    candidates.sort_by_key(|(k, _)| *k);
+                    candidates.first().map(|(k, _)| *k)
+                });
+            if let Some(a) = alias {
+                let account = cfg.accounts.get(a).unwrap();
+                let logged_in = claude::auth_status(&account.config_dir).keychain;
+                let is_default = cfg.default.as_deref() == Some(a);
+                println!("{}", format_account_line(a, account, logged_in, is_default));
+            } else {
+                println!(
+                    "{}",
+                    "CLAUDE_CONFIG_DIR not set (default: ~/.claude, unmanaged by ccm)".dimmed()
+                );
+            }
         }
     }
     Ok(())
@@ -72,7 +112,7 @@ fn print_detailed(
         String::new()
     };
 
-    println!("{}{}", alias.bold().green(), default_tag);
+    println!("{}{}", alias.bold(), default_tag);
     println!(
         "  path     {}{}",
         account.config_dir.display(),
