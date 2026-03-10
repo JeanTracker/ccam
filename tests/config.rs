@@ -1,6 +1,7 @@
 use ccam::config::{
-    add_account, expand_tilde, get_account, get_default, load, remove_account, set_default,
+    Account, add_account, expand_tilde, get_account, get_default, load, remove_account, set_default,
 };
+use colored::control;
 use std::path::Path;
 use std::sync::Mutex;
 
@@ -15,7 +16,7 @@ struct TestHome {
 
 impl TestHome {
     fn new() -> Self {
-        let guard = HOME_LOCK.lock().unwrap();
+        let guard = HOME_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let tmp = tempfile::TempDir::new().unwrap();
         let old_home = std::env::var("HOME").ok();
         // SAFETY: serialized by HOME_LOCK mutex, no other threads modify HOME
@@ -161,4 +162,41 @@ fn test_load_empty_when_no_file() {
     let cfg = load().unwrap();
     assert!(cfg.accounts.is_empty());
     assert!(cfg.default.is_none());
+}
+
+// --- Account methods ---
+
+fn make_account(email: Option<&str>, subscription_type: Option<&str>) -> Account {
+    Account {
+        config_dir: std::path::PathBuf::from("/tmp/test"),
+        description: None,
+        added_at: "2026-01-01T00:00:00Z".to_string(),
+        email: email.map(str::to_string),
+        subscription_type: subscription_type.map(str::to_string),
+    }
+}
+
+#[test]
+fn test_display_name_returns_email() {
+    let account = make_account(Some("user@example.com"), None);
+    assert_eq!(account.display_name(), "user@example.com");
+}
+
+#[test]
+fn test_display_name_returns_empty_when_no_email() {
+    let account = make_account(None, None);
+    assert_eq!(account.display_name(), "");
+}
+
+#[test]
+fn test_sub_tag_with_subscription() {
+    control::set_override(false);
+    let account = make_account(None, Some("pro"));
+    assert_eq!(account.sub_tag(), " (pro)");
+}
+
+#[test]
+fn test_sub_tag_empty_when_no_subscription() {
+    let account = make_account(None, None);
+    assert_eq!(account.sub_tag(), "");
 }
