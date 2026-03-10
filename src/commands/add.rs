@@ -18,14 +18,11 @@ pub fn run(alias: &str, dir: Option<&PathBuf>, description: Option<&str>) -> Res
     config::ensure_shared_symlinks()?;
     config::setup_account_symlinks(&account.config_dir)?;
 
-    // Auto-set as default if this is the first account
+    // Check if this account was auto-set as default (first account)
     let cfg = config::load()?;
-    let is_first = cfg.accounts.len() == 1 && cfg.default.is_none();
-    if is_first {
-        config::set_default(Some(alias))?;
-    }
+    let auto_defaulted = cfg.accounts.len() == 1 && cfg.default.as_deref() == Some(alias);
 
-    let default_tag = if is_first {
+    let default_tag = if auto_defaulted {
         format!("  {}", "(set as default)".dimmed())
     } else {
         String::new()

@@ -42,14 +42,28 @@ pub struct AccountsConfig {
     pub accounts: HashMap<String, Account>,
 }
 
+impl AccountsConfig {
+    /// Returns accounts sorted alphabetically by alias.
+    pub fn sorted_accounts(&self) -> Vec<(&str, &Account)> {
+        let mut accounts: Vec<(&str, &Account)> =
+            self.accounts.iter().map(|(k, v)| (k.as_str(), v)).collect();
+        accounts.sort_by_key(|(k, _)| *k);
+        accounts
+    }
+}
+
+fn resolve_home() -> PathBuf {
+    std::env::var("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| home_dir().expect("home dir not found"))
+}
+
 pub fn accounts_dir() -> PathBuf {
-    home_dir()
-        .expect("home dir not found")
-        .join(".claude-accounts")
+    resolve_home().join(".claude-accounts")
 }
 
 pub fn claude_dir() -> PathBuf {
-    home_dir().expect("home dir not found").join(".claude")
+    resolve_home().join(".claude")
 }
 
 pub fn shared_dir() -> PathBuf {
@@ -177,6 +191,9 @@ pub fn add_account(
         subscription_type: None,
     };
     cfg.accounts.insert(alias.to_string(), account.clone());
+    if cfg.default.is_none() && cfg.accounts.len() == 1 {
+        cfg.default = Some(alias.to_string());
+    }
     save(&cfg)?;
     Ok(account)
 }
@@ -188,8 +205,8 @@ pub fn remove_account(alias: &str) -> Result<Account> {
         .remove(alias)
         .with_context(|| format!("account '{}' not found", alias))?;
     if cfg.default.as_deref() == Some(alias) {
-        // Auto-assign another account as default if one exists
-        cfg.default = cfg.accounts.keys().next().cloned();
+        // Auto-assign alphabetically first remaining account as default
+        cfg.default = cfg.accounts.keys().min().cloned();
     }
     save(&cfg)?;
     Ok(account)
