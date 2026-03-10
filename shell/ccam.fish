@@ -20,6 +20,14 @@ function ccam
     end
     eval $output
     cat /tmp/ccam_err >&2
+  else if test "$argv[1]" = "remove" -o "$argv[1]" = "rm"
+    set output (command ccam $argv 2>/tmp/ccam_err)
+    set exit_code $status
+    cat /tmp/ccam_err >&2
+    if test $exit_code -eq 0 -a -n "$output"
+      eval $output
+    end
+    return $exit_code
   else
     command ccam $argv
   end

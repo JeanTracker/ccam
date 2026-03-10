@@ -22,6 +22,15 @@ ccam() {
     fi
     eval "$output"
     cat /tmp/ccam_err >&2
+  elif [[ "$cmd" == "remove" || "$cmd" == "rm" ]]; then
+    local output
+    output="$(command ccam "$@" 2>/tmp/ccam_err)"
+    local exit_code=$?
+    cat /tmp/ccam_err >&2
+    if [[ $exit_code -eq 0 && -n "$output" ]]; then
+      eval "$output"
+    fi
+    return $exit_code
   else
     command ccam "$@"
   fi

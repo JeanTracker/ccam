@@ -1,31 +1,49 @@
 use crate::{claude, commands::status::format_account_line, config};
 use anyhow::Result;
 use colored::control;
+use std::path::Path;
+
+/// Returns the shell statement to set or unset CLAUDE_CONFIG_DIR for the given account.
+pub fn export_statement(account: &config::Account) -> String {
+    if claude::is_default_config_dir(&account.config_dir) {
+        "unset CLAUDE_CONFIG_DIR".to_string()
+    } else {
+        format!(
+            "export CLAUDE_CONFIG_DIR=\"{}\"",
+            account.config_dir.display()
+        )
+    }
+}
 
 /// Internal command: outputs `export CLAUDE_CONFIG_DIR="..."` to stdout.
 /// Shell function wraps `ccm use` by eval-ing this output.
 /// User-facing messages must go to stderr only.
 pub fn run(alias: &str, no_refresh: bool) -> Result<()> {
+    run_inner(
+        alias,
+        no_refresh,
+        |p| claude::auth_status(p).keychain,
+        claude::fetch_user_info,
+    )
+}
+
+pub fn run_inner(
+    alias: &str,
+    no_refresh: bool,
+    auth_fn: impl Fn(&Path) -> bool,
+    fetch_fn: impl Fn(&Path) -> Option<claude::UserInfo>,
+) -> Result<()> {
     let account = config::get_account(alias)?;
     // stdout: only the export statement for eval
-    // If the account uses the default ~/.claude directory, unset CLAUDE_CONFIG_DIR so Claude Code
-    // uses its built-in default keychain key ("Claude Code-credentials" without hash suffix).
-    if claude::is_default_config_dir(&account.config_dir) {
-        println!("unset CLAUDE_CONFIG_DIR");
-    } else {
-        println!(
-            "export CLAUDE_CONFIG_DIR=\"{}\"",
-            account.config_dir.display()
-        );
-    }
+    println!("{}", export_statement(&account));
     if no_refresh {
         return Ok(());
     }
     // stderr: user-facing messages (not captured by eval)
-    let logged_in = claude::auth_status(&account.config_dir).keychain;
+    let logged_in = auth_fn(&account.config_dir);
     if logged_in {
         // Refresh stored user info on each switch (picks up logins done outside ccm)
-        if let Some(info) = claude::fetch_user_info(&account.config_dir) {
+        if let Some(info) = fetch_fn(&account.config_dir) {
             let _ = config::update_account_user_info(
                 alias,
                 Some(info.email),

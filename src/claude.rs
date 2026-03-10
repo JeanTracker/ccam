@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn find_claude() -> Result<String> {
     let output = Command::new("which").arg("claude").output();
@@ -71,11 +71,15 @@ pub fn run(config_dir: &Path) -> Result<()> {
 /// Run `claude auth logout` with CLAUDE_CONFIG_DIR set to config_dir.
 pub fn logout(config_dir: &Path) -> Result<()> {
     let claude = find_claude()?;
-    let status = Command::new(&claude)
+    let output = Command::new(&claude)
         .args(["auth", "logout"])
         .env("CLAUDE_CONFIG_DIR", config_dir)
-        .status()?;
-    if !status.success() {
+        .stdout(Stdio::piped())
+        .output()?;
+    // claude prints its messages to stdout; forward them to our stderr so the
+    // shell wrapper's output=$(...) does not capture them for eval.
+    eprint!("{}", String::from_utf8_lossy(&output.stdout));
+    if !output.status.success() {
         bail!("claude logout failed");
     }
     Ok(())

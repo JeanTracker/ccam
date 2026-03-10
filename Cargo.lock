@@ -106,7 +106,7 @@ dependencies = [
 
 [[package]]
 name = "ccam"
-version = "0.2.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "chrono",

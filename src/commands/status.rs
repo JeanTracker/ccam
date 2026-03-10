@@ -30,6 +30,21 @@ pub fn format_account_line(
     )
 }
 
+/// Finds the account alias that maps to ~/.claude when CLAUDE_CONFIG_DIR is unset.
+/// Priority: 1) default account if it uses ~/.claude  2) first alphabetically
+pub fn resolve_default_dir_account(cfg: &config::AccountsConfig) -> Option<&str> {
+    let uses_default_dir = |v: &config::Account| claude::is_default_config_dir(&v.config_dir);
+    cfg.default
+        .as_deref()
+        .filter(|d| cfg.accounts.get(*d).is_some_and(uses_default_dir))
+        .or_else(|| {
+            cfg.sorted_accounts()
+                .into_iter()
+                .find(|(_, v)| uses_default_dir(v))
+                .map(|(k, _)| k)
+        })
+}
+
 pub fn run_current() -> Result<()> {
     match env::var("CLAUDE_CONFIG_DIR") {
         Ok(dir) => {
@@ -52,25 +67,8 @@ pub fn run_current() -> Result<()> {
         }
         Err(_) => {
             // CLAUDE_CONFIG_DIR not set: active dir is ~/.claude
-            // Priority: 1) default account  2) earliest added (FIFO)
             let cfg = config::load()?;
-            let uses_default_dir =
-                |v: &config::Account| claude::is_default_config_dir(&v.config_dir);
-            let alias = cfg
-                .default
-                .as_deref()
-                .filter(|d| cfg.accounts.get(*d).is_some_and(uses_default_dir))
-                .or_else(|| {
-                    let mut candidates: Vec<(&str, &config::Account)> = cfg
-                        .accounts
-                        .iter()
-                        .filter(|(_, v)| uses_default_dir(v))
-                        .map(|(k, v)| (k.as_str(), v))
-                        .collect();
-                    candidates.sort_by_key(|(k, _)| *k);
-                    candidates.first().map(|(k, _)| *k)
-                });
-            if let Some(a) = alias {
+            if let Some(a) = resolve_default_dir_account(&cfg) {
                 let account = cfg.accounts.get(a).unwrap();
                 let logged_in = claude::auth_status(&account.config_dir).keychain;
                 let is_default = cfg.default.as_deref() == Some(a);

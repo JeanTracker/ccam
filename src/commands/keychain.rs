@@ -15,10 +15,7 @@ pub fn run_list() -> Result<()> {
         return Ok(());
     }
 
-    let mut accounts: Vec<(&String, &config::Account)> = cfg.accounts.iter().collect();
-    accounts.sort_by_key(|(k, _)| k.as_str());
-
-    for (alias, account) in &accounts {
+    for (alias, account) in &cfg.sorted_accounts() {
         let auth = crate::claude::auth_status(&account.config_dir);
         let keychain = if auth.keychain {
             "Keychain ✓".green()
@@ -40,7 +37,7 @@ pub fn run_status_default() -> Result<()> {
         );
         println!("(Used when CLAUDE_CONFIG_DIR is not set)");
         println!();
-        println!("To remove: {}", "ccm keychain clean-default".cyan());
+        println!("To remove: {}", "ccam keychain clean-default".cyan());
     } else {
         println!("Default Keychain entry {}.", "not found".dimmed());
     }

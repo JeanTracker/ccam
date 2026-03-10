@@ -11,42 +11,37 @@ pub fn run(names_only: bool) -> Result<()> {
         }
         println!("No accounts registered.");
         println!();
-        println!("Add an account: {}", "ccm add <alias>".cyan());
+        println!("Add an account: {}", "ccam add <alias>".cyan());
 
         // Hint about existing ~/.claude
-        let default_claude = dirs::home_dir().map(|h| h.join(".claude"));
-        if let Some(path) = default_claude
-            && path.exists()
-        {
+        let default_claude = config::claude_dir();
+        if default_claude.exists() {
             println!();
             println!(
                 "{} Existing Claude directory detected: {}",
                 "note:".yellow().bold(),
-                path.display()
+                default_claude.display()
             );
             println!(
                 "  {} reuse existing directory (re-login required)",
-                "ccm add <alias> --dir ~/.claude".to_string().cyan()
+                "ccam add <alias> --dir ~/.claude".to_string().cyan()
             );
-            println!("  {} create a new account", "ccm add <alias>".cyan());
+            println!("  {} create a new account", "ccam add <alias>".cyan());
         }
         return Ok(());
     }
+
+    let accounts = cfg.sorted_accounts();
 
     if names_only {
-        let mut names: Vec<&str> = cfg.accounts.keys().map(|s| s.as_str()).collect();
-        names.sort();
-        for name in names {
-            println!("{}", name);
+        for (alias, _) in &accounts {
+            println!("{}", alias);
         }
         return Ok(());
     }
 
-    let mut accounts: Vec<(&String, &config::Account)> = cfg.accounts.iter().collect();
-    accounts.sort_by_key(|(k, _)| k.as_str());
-
     for (alias, account) in &accounts {
-        let is_default = cfg.default.as_deref() == Some(alias.as_str());
+        let is_default = cfg.default.as_deref() == Some(*alias);
         let logged_in = claude::auth_status(&account.config_dir).keychain;
         let alias_str = if is_default {
             alias.cyan().bold().to_string()

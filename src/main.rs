@@ -49,6 +49,9 @@ enum Command {
         /// Alias of the account to remove
         #[arg(value_name = "ALIAS")]
         alias: String,
+        /// Skip confirmation prompt
+        #[arg(long, short = 'y')]
+        yes: bool,
     },
 
     /// [Internal] Output `export CLAUDE_CONFIG_DIR=...` for eval
@@ -133,8 +136,8 @@ fn main() -> Result<()> {
             commands::list::run(names_only)?;
         }
 
-        Command::Remove { alias } => {
-            commands::remove::run(&alias)?;
+        Command::Remove { alias, yes } => {
+            commands::remove::run(&alias, yes)?;
         }
 
         Command::InternalEnv { alias, no_refresh } => {
