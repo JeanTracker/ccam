@@ -124,7 +124,7 @@ When a new terminal opens, the default account is applied automatically via the 
 ### List accounts
 
 ```bash
-ccam list
+ccam list   # alias: ls
 * account1 user1@example.com (pro)
   account2 user2@example.com (pro)
 ! account3
@@ -159,7 +159,9 @@ ccam default --get       # Show current default
 ### Remove an account
 
 ```bash
-ccam remove account1   # Unregister account and delete config directory
+ccam remove account1      # Unregister account and delete config directory
+ccam remove account1 -y   # Skip confirmation prompt
+ccam rm account1          # alias: rm
 ```
 
 
