@@ -166,6 +166,110 @@ fn refresh_keeps_old_info_when_fetch_fails() {
     assert_eq!(account.email.as_deref(), Some("old@example.com"));
 }
 
+// --- shared config_dir: use command behavior ---
+
+/// Accounts sharing a config_dir produce the same export statement when switched to.
+/// CLAUDE_CONFIG_DIR alone cannot distinguish which of the sharing accounts is active.
+#[test]
+fn use_shared_dir_accounts_produce_identical_export_statement() {
+    let ctx = TestHome::new();
+    let shared_dir = ctx.accounts_dir().join("shared");
+
+    add_account("account1", shared_dir.clone(), None).unwrap();
+    add_account("account2", shared_dir.clone(), None).unwrap();
+
+    let cfg = ccam::config::load().unwrap();
+    let stmt1 = export_statement(&cfg.accounts["account1"]);
+    let stmt2 = export_statement(&cfg.accounts["account2"]);
+
+    assert_eq!(
+        stmt1, stmt2,
+        "shared-path accounts must produce identical export statements"
+    );
+    assert!(
+        stmt1.contains(&shared_dir.to_string_lossy().to_string()),
+        "export statement must contain the shared dir path"
+    );
+}
+
+/// Switching to account A updates only A's user info, not B's,
+/// even when A and B share the same config_dir.
+#[test]
+fn use_shared_dir_updates_only_selected_account_info() {
+    let ctx = TestHome::new();
+    let shared_dir = ctx.accounts_dir().join("shared");
+
+    add_account("account1", shared_dir.clone(), None).unwrap();
+    add_account("account2", shared_dir.clone(), None).unwrap();
+
+    // switch to account1 and receive user info
+    run_inner(
+        "account1",
+        false,
+        |_| true,
+        |_| {
+            Some(UserInfo {
+                email: "user1@example.com".to_string(),
+                subscription_type: "pro".to_string(),
+            })
+        },
+    )
+    .unwrap();
+
+    let account1 = get_account("account1").unwrap();
+    assert_eq!(account1.email.as_deref(), Some("user1@example.com"));
+
+    // account2 was never switched to; its info must remain unchanged
+    let account2 = get_account("account2").unwrap();
+    assert!(
+        account2.email.is_none(),
+        "account2 must not have its info changed: only account1 was switched to"
+    );
+}
+
+/// Sequential switches between shared-path accounts update each account's info independently.
+#[test]
+fn use_shared_dir_sequential_switch_updates_each_account_independently() {
+    let ctx = TestHome::new();
+    let shared_dir = ctx.accounts_dir().join("shared");
+
+    add_account("account1", shared_dir.clone(), None).unwrap();
+    add_account("account2", shared_dir.clone(), None).unwrap();
+
+    run_inner(
+        "account1",
+        false,
+        |_| true,
+        |_| {
+            Some(UserInfo {
+                email: "user1@example.com".to_string(),
+                subscription_type: "pro".to_string(),
+            })
+        },
+    )
+    .unwrap();
+
+    run_inner(
+        "account2",
+        false,
+        |_| true,
+        |_| {
+            Some(UserInfo {
+                email: "user2@example.com".to_string(),
+                subscription_type: "free".to_string(),
+            })
+        },
+    )
+    .unwrap();
+
+    let a1 = get_account("account1").unwrap();
+    let a2 = get_account("account2").unwrap();
+    assert_eq!(a1.email.as_deref(), Some("user1@example.com"));
+    assert_eq!(a2.email.as_deref(), Some("user2@example.com"));
+    assert_eq!(a1.subscription_type.as_deref(), Some("pro"));
+    assert_eq!(a2.subscription_type.as_deref(), Some("free"));
+}
+
 // --- default marker ---
 
 #[test]

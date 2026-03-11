@@ -164,6 +164,75 @@ fn test_load_empty_when_no_file() {
     assert!(cfg.default.is_none());
 }
 
+// --- shared --dir path: config layer ---
+
+/// Adding two accounts with the same `config_dir` must either be explicitly rejected,
+/// or must store byte-identical path values so keychain service derivation is consistent.
+///
+/// Currently `add_account` only checks alias uniqueness, so two aliases can share a dir.
+/// This test documents that behavior and fails if the contract breaks unexpectedly.
+#[test]
+fn test_add_account_same_dir_for_different_aliases_is_permitted() {
+    let ctx = TestHome::new();
+    let shared_dir = ctx.path().join("accounts").join("shared-dir");
+
+    add_account("account1", shared_dir.clone(), None).unwrap();
+    // account2 reuses account1's config_dir via --dir; must not panic or corrupt state
+    let result = add_account("account2", shared_dir.clone(), None);
+    assert!(
+        result.is_ok(),
+        "adding a second alias for an existing config_dir should not crash; \
+         path-uniqueness enforcement (if added) must return a clear error instead"
+    );
+}
+
+/// When two accounts are registered for the same `config_dir`, the stored path strings
+/// must be byte-for-byte identical so that `keychain_service` returns the same value for both.
+///
+/// A mismatch (e.g. one stored with tilde, one expanded) would cause one account to appear
+/// authenticated and the other not, even though they share the same keychain entry.
+#[test]
+fn test_add_account_same_dir_stores_identical_path_strings() {
+    let ctx = TestHome::new();
+    let shared_dir = ctx.path().join("accounts").join("shared-dir");
+
+    add_account("account1", shared_dir.clone(), None).unwrap();
+    add_account("account2", shared_dir.clone(), None).unwrap();
+
+    let cfg = load().unwrap();
+    let path1 = &cfg.accounts["account1"].config_dir;
+    let path2 = &cfg.accounts["account2"].config_dir;
+
+    assert_eq!(
+        path1, path2,
+        "both accounts must store identical config_dir strings; \
+         any difference causes keychain_service to produce different hashes"
+    );
+}
+
+/// When two accounts share a `config_dir`, their derived keychain service names must match.
+///
+/// This is the end-to-end assertion: if path strings are identical, service names must be
+/// identical, so `auth_status` returns the same result for both accounts.
+#[test]
+fn test_two_accounts_same_dir_produce_identical_keychain_service() {
+    let ctx = TestHome::new();
+    let shared_dir = ctx.path().join("accounts").join("shared-dir");
+
+    add_account("account1", shared_dir.clone(), None).unwrap();
+    add_account("account2", shared_dir.clone(), None).unwrap();
+
+    let cfg = load().unwrap();
+    let svc1 = ccam::claude::keychain_service(&cfg.accounts["account1"].config_dir);
+    let svc2 = ccam::claude::keychain_service(&cfg.accounts["account2"].config_dir);
+
+    assert_eq!(
+        svc1, svc2,
+        "accounts sharing config_dir must derive the same keychain service name; \
+         if account1 is authenticated, account2 must also appear authenticated"
+    );
+}
+
 // --- Account methods ---
 
 fn make_account(email: Option<&str>, subscription_type: Option<&str>) -> Account {

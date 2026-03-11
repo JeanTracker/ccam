@@ -59,6 +59,39 @@ fn test_auth_status_no_keychain() {
     assert!(!status.keychain);
 }
 
+// -- shared config_dir: keychain service consistency --
+
+/// Two accounts pointing to the exact same path string must produce the same keychain service name.
+///
+/// Regression: `dir_keychain_service` hashes the raw path string. If both accounts store
+/// identical `config_dir` values, their service names must match so that `auth_status`
+/// returns the same result for both.
+#[test]
+fn test_keychain_service_same_for_accounts_with_identical_path() {
+    let path = Path::new("/Users/testuser/.claude-accounts/work");
+    let service_a = keychain_service(path);
+    let service_b = keychain_service(path);
+    assert_eq!(
+        service_a, service_b,
+        "same path must always yield the same keychain service name"
+    );
+}
+
+/// `auth_status` called twice with the same config_dir must return the same keychain value.
+///
+/// This guards the scenario where account1 and account2 share a config_dir: if the
+/// keychain entry exists for that path, both accounts must see it identically.
+#[test]
+fn test_auth_status_consistent_for_same_dir_two_references() {
+    let tmp = TempDir::new().unwrap();
+    let status_a = auth_status(tmp.path());
+    let status_b = auth_status(tmp.path());
+    assert_eq!(
+        status_a.keychain, status_b.keychain,
+        "auth_status must be identical for two accounts sharing the same config_dir"
+    );
+}
+
 /// Trailing slash changes the SHA256 input → different keychain service name for the same directory.
 ///
 /// Documents the known limitation: a path stored without trailing slash and one stored with it
