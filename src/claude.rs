@@ -123,7 +123,9 @@ pub fn fetch_user_info(config_dir: &Path) -> Option<UserInfo> {
 pub fn dir_keychain_service(config_dir: &Path) -> String {
     use sha2::{Digest, Sha256};
     use std::fmt::Write;
-    let path_str = config_dir.to_string_lossy();
+    // Reconstruct via components() to strip any trailing slash before hashing.
+    let normalized: std::path::PathBuf = config_dir.components().collect();
+    let path_str = normalized.to_string_lossy();
     let hash = Sha256::digest(path_str.as_bytes());
     let mut hex = String::with_capacity(8);
     for b in &hash[..4] {
