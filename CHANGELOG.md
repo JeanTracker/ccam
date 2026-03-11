@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-03-12
+
+### Added
+- `--yes / -y` flag for `remove` command to skip confirmation prompt
+- Shell wrappers (bash/zsh/fish) now eval `remove` output to apply `CLAUDE_CONFIG_DIR` changes in the current shell session
+- `rm` alias for `remove` in all shell wrappers
+- `sorted_accounts()` method on `AccountsConfig` to consolidate sort-by-alias patterns
+- SHA256 checksum files generated alongside release tarballs
+- Comprehensive test suite: unit and integration tests for `remove`, `use`, `status`, shell integration, shared-path scenarios, and display formatting
+
+### Changed
+- `remove`: auto-reassigns default to alphabetically first remaining account after deletion
+- `add`: auto-default assignment now lives in `config::add_account()` (previously scattered)
+- Account line display unified across `ls`, `use`, and `active` commands (consistent prefix and color)
+- Release workflow now gates build on passing tests (`cargo fmt`, `clippy --all-targets`, `cargo test --locked`)
+- Release triggered on master push (Cargo.toml version change) instead of tag push
+- Fixed `ccm` → `ccam` typo in user-facing hints (`list`, `keychain`)
+
+### Fixed
+- `remove`: skip keychain logout and directory cleanup when `config_dir` is shared by another account
+- `status` / `active`: resolve active account deterministically when multiple accounts share the same `config_dir` (priority: default account first, then alphabetically first)
+- `dir_keychain_service`: normalize trailing slash before hashing so `/path/` and `/path` map to the same keychain service name
+- Shell `rm`/`remove` wrapper: restored interactive stdin by replacing command substitution with a temp file, so confirmation prompts work correctly
+
 ## [0.3.1] - 2026-03-08
 
 ### Changed
