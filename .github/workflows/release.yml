@@ -37,9 +37,34 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
+  test:
+    name: Test
+    needs: check
+    if: needs.check.outputs.skip == 'false'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
   build:
     name: Build ${{ matrix.target }}
-    needs: check
+    needs: [check, test]
     if: needs.check.outputs.skip == 'false'
     runs-on: ${{ matrix.os }}
     strategy:
@@ -65,7 +90,7 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
           TARGET: ${{ matrix.target }}
-        run: cargo build --release --target "$TARGET"
+        run: cargo build --release --locked --target "$TARGET"
 
       - name: Package
         env:
@@ -75,11 +100,18 @@ jobs:
           tar -czf "ccam-$TARGET.tar.gz" ccam
           mv "ccam-$TARGET.tar.gz" ../../../
 
+      - name: Checksum
+        env:
+          TARGET: ${{ matrix.target }}
+        run: shasum -a 256 "ccam-$TARGET.tar.gz" > "ccam-$TARGET.tar.gz.sha256"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ccam-${{ matrix.target }}
-          path: ccam-${{ matrix.target }}.tar.gz
+          path: |
+            ccam-${{ matrix.target }}.tar.gz
+            ccam-${{ matrix.target }}.tar.gz.sha256
 
   publish:
     name: Publish release
@@ -97,5 +129,7 @@ jobs:
           tag_name: v${{ needs.check.outputs.version }}
           files: |
             ccam-aarch64-apple-darwin.tar.gz
+            ccam-aarch64-apple-darwin.tar.gz.sha256
             ccam-x86_64-apple-darwin.tar.gz
+            ccam-x86_64-apple-darwin.tar.gz.sha256
           generate_release_notes: true
