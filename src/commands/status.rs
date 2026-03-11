@@ -45,17 +45,29 @@ pub fn resolve_default_dir_account(cfg: &config::AccountsConfig) -> Option<&str>
         })
 }
 
+/// Finds the account alias whose config_dir matches the given CLAUDE_CONFIG_DIR value.
+/// Priority: 1) default account if its config_dir matches  2) first alphabetically
+pub fn resolve_active_account<'a>(
+    cfg: &'a config::AccountsConfig,
+    active_dir: &str,
+) -> Option<&'a str> {
+    let matches = |v: &config::Account| v.config_dir.to_string_lossy() == active_dir;
+    cfg.default
+        .as_deref()
+        .filter(|d| cfg.accounts.get(*d).is_some_and(matches))
+        .or_else(|| {
+            cfg.sorted_accounts()
+                .into_iter()
+                .find(|(_, v)| matches(v))
+                .map(|(k, _)| k)
+        })
+}
+
 pub fn run_current() -> Result<()> {
     match env::var("CLAUDE_CONFIG_DIR") {
         Ok(dir) => {
             let cfg = config::load()?;
-            let alias = cfg.accounts.iter().find_map(|(k, v)| {
-                if v.config_dir.to_string_lossy() == dir {
-                    Some(k.as_str())
-                } else {
-                    None
-                }
-            });
+            let alias = resolve_active_account(&cfg, &dir);
             if let Some(a) = alias {
                 let account = cfg.accounts.get(a).unwrap();
                 let logged_in = claude::auth_status(&account.config_dir).keychain;
