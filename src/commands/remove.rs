@@ -30,6 +30,19 @@ pub fn run_inner(
     active_dir: Option<&str>,
     logout_fn: impl Fn(&Path) -> Result<()>,
 ) -> Result<Option<String>> {
+    run_inner_with_log(alias, active_dir, logout_fn, &mut |msg| {
+        eprintln!("{}", msg)
+    })
+}
+
+/// Like `run_inner` but accepts a `log` callback for all diagnostic messages.
+/// This enables tests to capture and assert on exact output without spawning subprocesses.
+pub fn run_inner_with_log(
+    alias: &str,
+    active_dir: Option<&str>,
+    logout_fn: impl Fn(&Path) -> Result<()>,
+    log: &mut dyn FnMut(&str),
+) -> Result<Option<String>> {
     let account = config::get_account(alias)?;
 
     // Determine whether this account is active before removal.
@@ -40,45 +53,72 @@ pub fn run_inner(
         None => claude::is_default_config_dir(&account.config_dir),
     };
 
-    // Step 1: logout to clean Keychain
-    eprintln!("Cleaning up Keychain entry...");
-    if let Err(e) = logout_fn(&account.config_dir) {
-        eprintln!(
-            "{} claude logout failed (Keychain entry may remain): {}",
-            "warning:".yellow(),
-            e
-        );
+    // Check before removal whether any OTHER account shares the same config_dir.
+    // If so, the Keychain entry and directory belong to those accounts too and must not be removed.
+    let cfg_before = config::load()?;
+    let dir_is_shared = cfg_before
+        .accounts
+        .iter()
+        .any(|(k, v)| k != alias && v.config_dir == account.config_dir);
+
+    // Step 1: logout to clean Keychain (skip when another account still uses the same dir)
+    if dir_is_shared {
+        log(&format!(
+            "{} Skipping Keychain cleanup: another account shares the same config dir.",
+            "note:".yellow()
+        ));
+    } else {
+        log("Cleaning up Keychain entry...");
+        if let Err(e) = logout_fn(&account.config_dir) {
+            log(&format!(
+                "{} claude logout failed (Keychain entry may remain): {}",
+                "warning:".yellow(),
+                e
+            ));
+        }
     }
 
     // Step 2: remove from accounts.toml
     let was_default = config::get_default()?.as_deref() == Some(alias);
     config::remove_account(alias)?;
-    eprintln!("Removed '{}' from accounts.toml.", alias);
+    log(&format!("Removed '{}' from accounts.toml.", alias));
 
     if was_default {
         match config::get_default()? {
-            Some(new_default) => eprintln!(
+            Some(new_default) => log(&format!(
                 "{} default reassigned to '{}'",
                 "note:".yellow(),
                 new_default.cyan()
-            ),
-            None => eprintln!("{} no accounts remain; default cleared", "note:".yellow()),
+            )),
+            None => log(&format!(
+                "{} no accounts remain; default cleared",
+                "note:".yellow()
+            )),
         }
     }
 
-    // Step 3: delete config directory (skip if it's the default ~/.claude)
+    // Step 3: delete config directory.
+    // Skip for ~/.claude (always preserved) and when another account still references the dir.
     if claude::is_default_config_dir(&account.config_dir) {
-        eprintln!(
+        log(&format!(
             "{} Skipping deletion of default directory: {}",
             "note:".yellow(),
             account.config_dir.display()
-        );
+        ));
+    } else if dir_is_shared {
+        log(&format!(
+            "{} Skipping deletion: another account still references this directory.",
+            "note:".yellow()
+        ));
     } else if account.config_dir.exists() {
         fs::remove_dir_all(&account.config_dir)?;
-        eprintln!("Deleted directory: {}", account.config_dir.display());
+        log(&format!(
+            "Deleted directory: {}",
+            account.config_dir.display()
+        ));
     }
 
-    eprintln!("{}", format!("Account '{}' removed.", alias).green());
+    log(&format!("Account '{}' removed.", alias).green().to_string());
 
     // Step 4: if this account was active, return the eval statement for the shell wrapper.
     if !is_active {
@@ -89,13 +129,16 @@ pub fn run_inner(
     let eval_stmt = match cfg.default.as_deref() {
         Some(new_default) => match cfg.accounts.get(new_default) {
             Some(acc) => {
-                eprintln!("Switching current session to '{}'...", new_default);
+                log(&format!(
+                    "Switching current session to '{}'...",
+                    new_default
+                ));
                 export_statement(acc)
             }
             None => "unset CLAUDE_CONFIG_DIR".to_string(),
         },
         None => {
-            eprintln!("Unsetting CLAUDE_CONFIG_DIR in current session.");
+            log("Unsetting CLAUDE_CONFIG_DIR in current session.");
             "unset CLAUDE_CONFIG_DIR".to_string()
         }
     };
